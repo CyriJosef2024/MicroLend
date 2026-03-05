@@ -13,6 +13,12 @@ SDG 8: Decent Work and Economic Growth
  - Repayment Prediction: A points-based algorithm that calculates the likelihood of on-time payment based on history and income.
  - Data Visualization: Charts showing cumulative repayments over time and loan purpose distributions.
 
+Complex OOP Principles 
+- Abstraction
+- Encapsulation 
+- Polymorphism
+- Inheritance
+
 
 **Group Members:**
 * Josef, Cyr Michael
