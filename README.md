@@ -14,7 +14,7 @@ SDG 8: Decent Work and Economic Growth
  - Data Visualization: Charts showing cumulative repayments over time and loan purpose distributions.
 
 
-## Group Members:
+**Group Members:**
 * Josef, Cyr Michael
 * Bonilla, Jasmin Claire
 * Ong, Maria Shakira
