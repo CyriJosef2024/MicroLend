@@ -7,7 +7,11 @@ A system to manage small, interest-free loans within a community (like a communi
 Sustainable Development Goals alignment: 
 SDG 8: Decent Work and Economic Growth 
 
-**## Key Features**
+**Key Features**
+ - Borrower Management: Full CRUD (Create, Read, Update, Delete) for managing entrepreneur profiles.
+ - Loan Tracking: Manage loan amounts, purposes (like buying a sewing machine), and repayment schedules.
+ - Repayment Prediction: A points-based algorithm that calculates the likelihood of on-time payment based on history and income.
+ - Data Visualization: Charts showing cumulative repayments over time and loan purpose distributions.
 
 
 ## Group Members:
