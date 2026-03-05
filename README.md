@@ -6,3 +6,10 @@ A system to manage small, interest-free loans within a community (like a communi
 
 Sustainable Development Goals alignment: 
 SDG 8: Decent Work and Economic Growth 
+
+## Group Members:
+* Josef, Cyr Michael
+* Bonilla, Jasmin Claire
+* Ong, Maria Shakira
+* Onia, James
+* Pariñas, Diana
