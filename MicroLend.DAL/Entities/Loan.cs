@@ -1,24 +1,20 @@
-﻿namespace MicroLend.DAL.Entities;
-
-public class Loan
+﻿namespace MicroLend.DAL.Entities
 {
-    public int Id { get; set; }
+    public class Loan : BaseEntity
+    {
+        public string Purpose { get; set; } = string.Empty;
+        public decimal TargetAmount { get; set; }
+        public decimal CurrentAmount { get; set; }
+        public decimal InterestRate { get; set; } = 5.0m;
+        public string Status { get; set; } = "Funding"; 
+        public bool IsCrowdfunded { get; set; } = true;
+        public int BorrowerId { get; set; }
+        public DateTime? DateGranted { get; set; }
 
-    // Basic loan information
-    public string Title { get; set; } = string.Empty;
-    public string? Description { get; set; }
-    public decimal TargetAmount { get; set; }
-    public decimal CurrentAmount { get; set; }
-    public decimal InterestRate { get; set; }
-    public int TermMonths { get; set; }
-    public bool IsApproved { get; set; }
-    public bool IsOpen { get; set; } = true;
-
-    // Borrower
-    public int BorrowerId { get; set; }
-    public Borrower? Borrower { get; set; }
-
-    // Repayments and funders
-    public ICollection<Repayment> Repayments { get; set; } = new List<Repayment>();
-    public ICollection<LoanFunder> Funders { get; set; } = new List<LoanFunder>();
+        // Navigation property for interest distribution
+        public virtual ICollection<Repayment> Repayments { get; set; } = new List<Repayment>();
+    
+        // Navigation for funders (investors)
+    public virtual ICollection<LoanFunder> Funders { get; set; } = new List<LoanFunder>();
+    }
 }

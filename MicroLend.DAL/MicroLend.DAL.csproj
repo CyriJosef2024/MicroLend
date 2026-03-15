@@ -7,6 +7,40 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <None Remove="Data\Borrowers_Seeding.csv" />
+    <None Remove="Data\CreditScores_Seeding.csv" />
+    <None Remove="Data\EmergencyPool_Seeding.csv" />
+    <None Remove="Data\LoanFunders_Seeding.csv" />
+    <None Remove="Data\Loans_Seeding.csv" />
+    <None Remove="Data\Repayments_Seeding.csv" />
+    <None Remove="Data\Users_Seeding.csv" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="Data\Borrowers_Seeding.csv">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Data\CreditScores_Seeding.csv">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Data\EmergencyPool_Seeding.csv">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Data\LoanFunders_Seeding.csv">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Data\Loans_Seeding.csv">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Data\Repayments_Seeding.csv">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Data\Users_Seeding.csv">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.3">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>

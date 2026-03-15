@@ -26,6 +26,9 @@ namespace MicroLend.DAL.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
+                    b.Property<int?>("CreditScoreId")
+                        .HasColumnType("INTEGER");
+
                     b.Property<decimal>("MonthlyIncome")
                         .HasColumnType("TEXT");
 
@@ -38,8 +41,9 @@ namespace MicroLend.DAL.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("UserId")
-                        .IsUnique();
+                    b.HasIndex("CreditScoreId");
+
+                    b.HasIndex("UserId");
 
                     b.ToTable("Borrowers");
                 });
@@ -50,22 +54,26 @@ namespace MicroLend.DAL.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("INTEGER");
 
-                    b.Property<DateTime>("AssessedAt")
+                    b.Property<DateTime>("CreatedAt")
                         .HasColumnType("TEXT");
 
-                    b.Property<int>("BorrowerId")
-                        .HasColumnType("INTEGER");
+                    b.Property<string>("Details")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("QuizDate")
+                        .HasColumnType("TEXT");
 
                     b.Property<int>("Score")
                         .HasColumnType("INTEGER");
 
-                    b.Property<string>("Source")
+                    b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("TEXT");
 
-                    b.HasKey("Id");
+                    b.Property<int>("UserId")
+                        .HasColumnType("INTEGER");
 
-                    b.HasIndex("BorrowerId")
-                        .IsUnique();
+                    b.HasKey("Id");
 
                     b.ToTable("CreditScores");
                 });
@@ -97,17 +105,23 @@ namespace MicroLend.DAL.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Description")
+                        .IsRequired()
                         .HasColumnType("TEXT");
 
-                    b.Property<int>("TransactionType")
-                        .HasColumnType("INTEGER");
+                    b.Property<DateTime>("TransactionDate")
+                        .HasColumnType("TEXT");
 
-                    b.Property<int?>("UserId")
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("UserId")
                         .HasColumnType("INTEGER");
 
                     b.HasKey("Id");
-
-                    b.HasIndex("UserId");
 
                     b.ToTable("EmergencyPoolTransactions");
                 });
@@ -138,29 +152,33 @@ namespace MicroLend.DAL.Migrations
                     b.Property<int>("BorrowerId")
                         .HasColumnType("INTEGER");
 
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
                     b.Property<decimal>("CurrentAmount")
                         .HasColumnType("TEXT");
 
-                    b.Property<string>("Description")
+                    b.Property<DateTime?>("DateGranted")
                         .HasColumnType("TEXT");
 
                     b.Property<decimal>("InterestRate")
                         .HasColumnType("TEXT");
 
-                    b.Property<bool>("IsApproved")
+                    b.Property<bool>("IsCrowdfunded")
                         .HasColumnType("INTEGER");
 
-                    b.Property<bool>("IsOpen")
-                        .HasColumnType("INTEGER");
+                    b.Property<string>("Purpose")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
 
                     b.Property<decimal>("TargetAmount")
                         .HasColumnType("TEXT");
 
-                    b.Property<int>("TermMonths")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<string>("Title")
-                        .IsRequired()
+                    b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("TEXT");
 
                     b.HasKey("Id");
@@ -176,23 +194,30 @@ namespace MicroLend.DAL.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("INTEGER");
 
-                    b.Property<decimal>("AmountFunded")
+                    b.Property<decimal>("Amount")
                         .HasColumnType("TEXT");
 
-                    b.Property<DateTime>("FundedAt")
+                    b.Property<DateTime>("CreatedAt")
                         .HasColumnType("TEXT");
+
+                    b.Property<decimal>("ExpectedInterest")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("FundingDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("LenderId")
+                        .HasColumnType("INTEGER");
 
                     b.Property<int>("LoanId")
                         .HasColumnType("INTEGER");
 
-                    b.Property<int>("UserId")
-                        .HasColumnType("INTEGER");
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("TEXT");
 
                     b.HasKey("Id");
 
                     b.HasIndex("LoanId");
-
-                    b.HasIndex("UserId");
 
                     b.ToTable("LoanFunders");
                 });
@@ -230,8 +255,7 @@ namespace MicroLend.DAL.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("INTEGER");
 
-                    b.Property<string>("Email")
-                        .IsRequired()
+                    b.Property<DateTime>("CreatedAt")
                         .HasColumnType("TEXT");
 
                     b.Property<string>("PasswordHash")
@@ -240,6 +264,9 @@ namespace MicroLend.DAL.Migrations
 
                     b.Property<string>("Role")
                         .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Username")
@@ -253,59 +280,35 @@ namespace MicroLend.DAL.Migrations
 
             modelBuilder.Entity("MicroLend.DAL.Entities.Borrower", b =>
                 {
-                    b.HasOne("MicroLend.DAL.Entities.User", "User")
-                        .WithOne("Borrower")
-                        .HasForeignKey("MicroLend.DAL.Entities.Borrower", "UserId");
+                    b.HasOne("MicroLend.DAL.Entities.CreditScore", "CreditScore")
+                        .WithMany()
+                        .HasForeignKey("CreditScoreId");
 
-                    b.Navigation("User");
-                });
-
-            modelBuilder.Entity("MicroLend.DAL.Entities.CreditScore", b =>
-                {
-                    b.HasOne("MicroLend.DAL.Entities.Borrower", "Borrower")
-                        .WithOne("CreditScore")
-                        .HasForeignKey("MicroLend.DAL.Entities.CreditScore", "BorrowerId");
-
-                    b.Navigation("Borrower");
-                });
-
-            modelBuilder.Entity("MicroLend.DAL.Entities.EmergencyPoolTransaction", b =>
-                {
                     b.HasOne("MicroLend.DAL.Entities.User", "User")
                         .WithMany()
                         .HasForeignKey("UserId");
+
+                    b.Navigation("CreditScore");
 
                     b.Navigation("User");
                 });
 
             modelBuilder.Entity("MicroLend.DAL.Entities.Loan", b =>
                 {
-                    b.HasOne("MicroLend.DAL.Entities.Borrower", "Borrower")
+                    b.HasOne("MicroLend.DAL.Entities.Borrower", null)
                         .WithMany("Loans")
                         .HasForeignKey("BorrowerId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
-
-                    b.Navigation("Borrower");
                 });
 
             modelBuilder.Entity("MicroLend.DAL.Entities.LoanFunder", b =>
                 {
-                    b.HasOne("MicroLend.DAL.Entities.Loan", "Loan")
+                    b.HasOne("MicroLend.DAL.Entities.Loan", null)
                         .WithMany("Funders")
                         .HasForeignKey("LoanId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
-
-                    b.HasOne("MicroLend.DAL.Entities.User", "User")
-                        .WithMany("FundedLoans")
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Loan");
-
-                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("MicroLend.DAL.Entities.Repayment", b =>
@@ -327,8 +330,6 @@ namespace MicroLend.DAL.Migrations
 
             modelBuilder.Entity("MicroLend.DAL.Entities.Borrower", b =>
                 {
-                    b.Navigation("CreditScore");
-
                     b.Navigation("Loans");
                 });
 
@@ -337,13 +338,6 @@ namespace MicroLend.DAL.Migrations
                     b.Navigation("Funders");
 
                     b.Navigation("Repayments");
-                });
-
-            modelBuilder.Entity("MicroLend.DAL.Entities.User", b =>
-                {
-                    b.Navigation("Borrower");
-
-                    b.Navigation("FundedLoans");
                 });
 #pragma warning restore 612, 618
         }

@@ -1,20 +1,12 @@
+using System;
+
 namespace MicroLend.DAL.Entities;
 
-public enum EmergencyTransactionType
+public class EmergencyPoolTransaction : BaseEntity
 {
-    Donation,
-    Withdrawal
-}
-
-public class EmergencyPoolTransaction
-{
-    public int Id { get; set; }
-    public EmergencyTransactionType TransactionType { get; set; }
+    public int UserId { get; set; }
     public decimal Amount { get; set; }
-    public DateTime CreatedAt { get; set; }
-    public string? Description { get; set; }
-
-    // Optional actor
-    public int? UserId { get; set; }
-    public User? User { get; set; }
+    public string Type { get; set; } = "Donation"; // "Donation" or "Withdrawal"
+    public string Description { get; set; } = string.Empty;
+    public DateTime TransactionDate { get; set; } = DateTime.Now;
 }

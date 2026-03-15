@@ -31,7 +31,8 @@ namespace MicroLend.DAL.Repositories
                 await _context.EmergencyPools.AddAsync(pool);
             }
 
-            pool.TotalBalance += tx.TransactionType == EmergencyTransactionType.Donation ? tx.Amount : -tx.Amount;
+            // Transaction Type stored as string in model ("Donation" or "Withdrawal")
+            pool.TotalBalance += tx.Type == "Donation" ? tx.Amount : -tx.Amount;
             await _context.SaveChangesAsync();
         }
 
