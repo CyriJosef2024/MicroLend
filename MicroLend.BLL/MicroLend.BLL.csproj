@@ -10,4 +10,12 @@
     <ProjectReference Include="..\MicroLend.DAL\MicroLend.DAL.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="Utils\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="utils\MicroLend.BLL.csproj" />
+  </ItemGroup>
+
 </Project>
