@@ -31,7 +31,7 @@ namespace MicroLend.DAL.Repositories
         {
             var fundersSum = await _context.LoanFunders
                 .Where(f => f.LoanId == loanId)
-                .SumAsync(f => (decimal?)f.AmountFunded) ?? 0m;
+                .SumAsync(f => (decimal?)f.Amount) ?? 0m;
 
             // keep compatibility with older Investment entity
             var investmentsSum = await _context.Investments
