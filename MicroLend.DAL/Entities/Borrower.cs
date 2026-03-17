@@ -9,6 +9,8 @@ public class Borrower
     public User? User { get; set; }
 
     public string Name { get; set; } = string.Empty;
+    public string BusinessType { get; set; } = string.Empty;
+    public string FullName => Name;
     public string ContactNumber { get; set; } = string.Empty;
     public decimal MonthlyIncome { get; set; }
 

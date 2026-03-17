@@ -12,6 +12,22 @@ namespace MicroLend.DAL.Repositories
             return await _context.Loans.Where(l => l.BorrowerId == borrowerId).ToListAsync();
         }
 
+        public async Task<Loan?> GetByIdAsync(int id)
+        {
+            return await _context.Loans.FirstOrDefaultAsync(l => l.Id == id);
+        }
+
+        public async Task<List<Loan>> GetLoansByBorrowerIdAsync(int borrowerId)
+        {
+            // alias for older BLL expectations
+            return await GetLoansByBorrowerAsync(borrowerId);
+        }
+
+        public async Task<List<Loan>> GetActiveLoansByBorrowerAsync(int borrowerId)
+        {
+            return await _context.Loans.Where(l => l.BorrowerId == borrowerId && l.Status == "Active").ToListAsync();
+        }
+
         public async Task AddAsync(Loan loan)
         {
             await _context.Loans.AddAsync(loan);
@@ -39,6 +55,12 @@ namespace MicroLend.DAL.Repositories
                 .SumAsync(i => (decimal?)i.AmountInvested) ?? 0m;
 
             return fundersSum + investmentsSum;
+        }
+
+        public async Task UpdateAsync(Loan loan)
+        {
+            _context.Loans.Update(loan);
+            await _context.SaveChangesAsync();
         }
     }
 }

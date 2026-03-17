@@ -11,7 +11,14 @@ namespace MicroLend.UI
             // To customize application configuration such as set high DPI settings or default font,
             // see https://aka.ms/applicationconfiguration.
             ApplicationConfiguration.Initialize();
-            Application.Run(new Form1());
+            using (var login = new LoginForm())
+            {
+                var dr = login.ShowDialog();
+                if (dr == System.Windows.Forms.DialogResult.OK)
+                {
+                    Application.Run(new Form1());
+                }
+            }
         }
     }
 }

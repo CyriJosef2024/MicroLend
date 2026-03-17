@@ -14,5 +14,10 @@ namespace MicroLend.DAL.Repositories
             await _context.Borrowers.AddAsync(borrower);
             await _context.SaveChangesAsync();
         }
+
+        public async Task<Borrower?> GetByIdAsync(int id)
+        {
+            return await _context.Borrowers.FirstOrDefaultAsync(b => b.Id == id);
+        }
     }
 }
