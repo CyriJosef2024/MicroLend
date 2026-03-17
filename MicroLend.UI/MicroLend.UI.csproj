@@ -10,6 +10,15 @@
 
   <ItemGroup>
     <ProjectReference Include="..\MicroLend.BLL\MicroLend.BLL.csproj" />
+    <ProjectReference Include="..\MicroLend.DAL\MicroLend.DAL.csproj" />
+  </ItemGroup>
+
+  <!-- Ensure CSV seed data from DAL is copied into the UI output so DataSeeder can find it at runtime -->
+  <ItemGroup>
+    <Content Include="..\MicroLend.DAL\Data\**\*.*">
+      <Link>Data\%(RecursiveDir)%(Filename)%(Extension)</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
 
 </Project>

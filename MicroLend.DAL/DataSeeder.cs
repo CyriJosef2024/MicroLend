@@ -93,14 +93,45 @@ namespace MicroLend.DAL
                 try
                 {
                     var cols = SplitCsv(line);
+                    // CSV may include an Id column as the first value. Handle both formats:
+                    // Format A: Id,Username,Password,Role
+                    // Format B: Username,Password,Role
+                    int parsedId = 0;
+                    string username;
+                    string password;
+                    string role;
+
+                    if (cols.Length >= 4 && int.TryParse(cols[0], out parsedId))
+                    {
+                        username = cols.ElementAtOrDefault(1) ?? string.Empty;
+                        password = cols.ElementAtOrDefault(2) ?? string.Empty;
+                        role = cols.ElementAtOrDefault(3) ?? "Borrower";
+                    }
+                    else
+                    {
+                        username = cols.ElementAtOrDefault(0) ?? string.Empty;
+                        password = cols.ElementAtOrDefault(1) ?? string.Empty;
+                        role = cols.ElementAtOrDefault(2) ?? "Borrower";
+                    }
+
+                    // Normalize trimmed values
+                    username = (username ?? string.Empty).Trim();
+                    password = (password ?? string.Empty).Trim();
+                    role = (role ?? "Borrower").Trim();
+
                     var user = new User
                     {
-                        Username = cols.ElementAtOrDefault(0) ?? string.Empty,
-                        PasswordHash = cols.ElementAtOrDefault(1) ?? string.Empty,
-                        Role = cols.ElementAtOrDefault(2) ?? "Borrower",
+                        Username = username,
+                        PasswordHash = password,
+                        Role = role,
                         CreatedAt = DateTime.Now,
                         UpdatedAt = DateTime.Now
                     };
+
+                    if (parsedId > 0)
+                    {
+                        user.Id = parsedId;
+                    }
                     await context.Users.AddAsync(user);
                 }
                 catch { /* skip bad row */ }
@@ -118,14 +149,40 @@ namespace MicroLend.DAL
                 try
                 {
                     var cols = SplitCsv(line);
+
+                    // CSV may include Id as the first column. Handle both formats:
+                    // Format A: Id,FullName,ContactInfo,MonthlyIncome,UserId
+                    // Format B: FullName,ContactInfo,MonthlyIncome,UserId
+                    int parsedId = 0;
+                    string name = string.Empty;
+                    string contact = string.Empty;
+                    decimal income = 0m;
+                    int? userId = null;
+
+                    if (cols.Length >= 5 && int.TryParse(cols[0], out parsedId))
+                    {
+                        name = cols.ElementAtOrDefault(1) ?? string.Empty;
+                        contact = cols.ElementAtOrDefault(2) ?? string.Empty;
+                        income = decimal.TryParse(cols.ElementAtOrDefault(3), NumberStyles.Any, CultureInfo.InvariantCulture, out var inc) ? inc : 0m;
+                        userId = int.TryParse(cols.ElementAtOrDefault(4), out var uid) ? uid : (int?)null;
+                    }
+                    else
+                    {
+                        name = cols.ElementAtOrDefault(0) ?? string.Empty;
+                        contact = cols.ElementAtOrDefault(1) ?? string.Empty;
+                        income = decimal.TryParse(cols.ElementAtOrDefault(2), NumberStyles.Any, CultureInfo.InvariantCulture, out var inc) ? inc : 0m;
+                        userId = int.TryParse(cols.ElementAtOrDefault(3), out var uid) ? uid : (int?)null;
+                    }
+
                     var borrower = new Borrower
                     {
-                        Name = cols.ElementAtOrDefault(0) ?? string.Empty,
-                        ContactNumber = cols.ElementAtOrDefault(1) ?? string.Empty,
-                        MonthlyIncome = decimal.TryParse(cols.ElementAtOrDefault(2), NumberStyles.Any, CultureInfo.InvariantCulture, out var inc) ? inc : 0m,
-                        // attempt to assign UserId if present
-                        UserId = int.TryParse(cols.ElementAtOrDefault(3), out var uid) ? uid : (int?)null
+                        Name = name,
+                        ContactNumber = contact,
+                        MonthlyIncome = income,
+                        UserId = userId
                     };
+
+                    if (parsedId > 0) borrower.Id = parsedId;
                     await context.Borrowers.AddAsync(borrower);
                 }
                 catch { }
@@ -175,19 +232,50 @@ namespace MicroLend.DAL
                 try
                 {
                     var cols = SplitCsv(line);
+
+                    // Handle different CSV formats. Common format in this project:
+                    // Id,Purpose,TargetAmount,CurrentAmount,IsApproved,BorrowerId
+                    int parsedId = 0;
+                    string purpose = string.Empty;
+                    decimal target = 0m;
+                    decimal current = 0m;
+                    bool isApproved = false;
+                    int borrowerId = 0;
+
+                    if (cols.Length >= 6 && int.TryParse(cols[0], out parsedId))
+                    {
+                        purpose = cols.ElementAtOrDefault(1) ?? string.Empty;
+                        target = decimal.TryParse(cols.ElementAtOrDefault(2), NumberStyles.Any, CultureInfo.InvariantCulture, out var t) ? t : 0m;
+                        current = decimal.TryParse(cols.ElementAtOrDefault(3), NumberStyles.Any, CultureInfo.InvariantCulture, out var c) ? c : 0m;
+                        isApproved = bool.TryParse(cols.ElementAtOrDefault(4), out var ap) ? ap : false;
+                        borrowerId = int.TryParse(cols.ElementAtOrDefault(5), out var bid) ? bid : 0;
+                    }
+                    else
+                    {
+                        // fallback to previous mapping
+                        purpose = cols.ElementAtOrDefault(0) ?? string.Empty;
+                        target = decimal.TryParse(cols.ElementAtOrDefault(1), NumberStyles.Any, CultureInfo.InvariantCulture, out var t) ? t : 0m;
+                        current = decimal.TryParse(cols.ElementAtOrDefault(2), NumberStyles.Any, CultureInfo.InvariantCulture, out var c) ? c : 0m;
+                        isApproved = bool.TryParse(cols.ElementAtOrDefault(3), out var ap) ? ap : false;
+                        borrowerId = int.TryParse(cols.ElementAtOrDefault(4), out var bid) ? bid : 0;
+                    }
+
                     var loan = new Loan
                     {
-                        Purpose = cols.ElementAtOrDefault(0) ?? string.Empty,
-                        TargetAmount = decimal.TryParse(cols.ElementAtOrDefault(1), NumberStyles.Any, CultureInfo.InvariantCulture, out var t) ? t : 0m,
-                        CurrentAmount = decimal.TryParse(cols.ElementAtOrDefault(2), NumberStyles.Any, CultureInfo.InvariantCulture, out var c) ? c : 0m,
-                        InterestRate = decimal.TryParse(cols.ElementAtOrDefault(3), NumberStyles.Any, CultureInfo.InvariantCulture, out var ir) ? ir : 0m,
-                        Status = cols.ElementAtOrDefault(4) ?? "Funding",
-                        IsCrowdfunded = bool.TryParse(cols.ElementAtOrDefault(5), out var ic) ? ic : true,
-                        BorrowerId = int.TryParse(cols.ElementAtOrDefault(6), out var bid) ? bid : 0,
-                        DateGranted = DateTime.TryParse(cols.ElementAtOrDefault(7), out var dg) ? dg : (DateTime?)null,
+                        Purpose = purpose,
+                        TargetAmount = target,
+                        CurrentAmount = current,
+                        Amount = target,
+                        InterestRate = 5.0m,
+                        Status = isApproved ? "Active" : "Funding",
+                        IsCrowdfunded = true,
+                        BorrowerId = borrowerId,
+                        DateGranted = null,
                         CreatedAt = DateTime.Now,
                         UpdatedAt = DateTime.Now
                     };
+
+                    if (parsedId > 0) loan.Id = parsedId;
                     await context.Loans.AddAsync(loan);
                 }
                 catch { }

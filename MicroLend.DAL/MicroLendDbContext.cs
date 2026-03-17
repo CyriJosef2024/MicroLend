@@ -1,6 +1,8 @@
 ﻿using MicroLend.DAL.Entities;
 using Microsoft.EntityFrameworkCore;
 
+namespace MicroLend.DAL;
+
 public class MicroLendDbContext : DbContext
 {
     public DbSet<User> Users { get; set; }

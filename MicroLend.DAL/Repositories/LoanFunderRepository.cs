@@ -13,4 +13,15 @@ public class LoanFunderRepository : Repository<LoanFunder>
     {
         return await _dbSet.Where(f => f.LoanId == loanId).ToListAsync();
     }
+
+    public async Task<List<LoanFunder>> GetByLenderIdAsync(int lenderId)
+    {
+        return await _dbSet.Where(f => f.LenderId == lenderId).ToListAsync();
+    }
+
+    public async Task UpdateAsync(LoanFunder funder)
+    {
+        _context.Update(funder);
+        await _context.SaveChangesAsync();
+    }
 }

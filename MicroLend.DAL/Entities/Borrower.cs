@@ -11,6 +11,11 @@ public class Borrower
     public string Name { get; set; } = string.Empty;
     public string ContactNumber { get; set; } = string.Empty;
     public decimal MonthlyIncome { get; set; }
+    // Business type description used by scoring rules (e.g. "sari-sari", "farming")
+    public string BusinessType { get; set; } = string.Empty;
+
+    // Convenience full name for UI / dashboards
+    public string FullName => Name;
 
     // Optional one-to-one credit score record
     public CreditScore? CreditScore { get; set; }

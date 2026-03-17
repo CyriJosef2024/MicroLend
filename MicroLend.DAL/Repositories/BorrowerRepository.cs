@@ -9,9 +9,17 @@ namespace MicroLend.DAL.Repositories
 
         public async Task<List<Borrower>> GetAllAsync() => await _context.Borrowers.ToListAsync();
 
+        public async Task<Borrower?> GetByIdAsync(int id) => await _context.Borrowers.FindAsync(id);
+
         public async Task AddAsync(Borrower borrower)
         {
             await _context.Borrowers.AddAsync(borrower);
+            await _context.SaveChangesAsync();
+        }
+
+        public async Task UpdateAsync(Borrower borrower)
+        {
+            _context.Borrowers.Update(borrower);
             await _context.SaveChangesAsync();
         }
     }

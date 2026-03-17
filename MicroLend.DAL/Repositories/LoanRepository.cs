@@ -18,6 +18,38 @@ namespace MicroLend.DAL.Repositories
             await _context.SaveChangesAsync();
         }
 
+        public async Task<Loan?> GetByIdAsync(int id)
+        {
+            return await _context.Loans.FindAsync(id);
+        }
+
+        public async Task UpdateAsync(Loan loan)
+        {
+            _context.Loans.Update(loan);
+            await _context.SaveChangesAsync();
+        }
+
+        // Compatibility methods used by BLL services
+        public async Task<List<Loan>> GetLoansByBorrowerIdAsync(int borrowerId)
+        {
+            return await GetLoansByBorrowerAsync(borrowerId);
+        }
+
+        public async Task<List<Loan>> GetActiveLoansByBorrowerAsync(int borrowerId)
+        {
+            return await _context.Loans.Where(l => l.BorrowerId == borrowerId && l.Status == "Active").ToListAsync();
+        }
+
+        public async Task ActivateLoanAsync(int loanId)
+        {
+            var loan = await GetByIdAsync(loanId);
+            if (loan == null) return;
+            loan.Status = "Active";
+            loan.DateGranted = DateTime.Now;
+            if (loan.CurrentAmount <= 0) loan.CurrentAmount = loan.Amount > 0 ? loan.Amount : loan.TargetAmount;
+            await UpdateAsync(loan);
+        }
+
         public async Task<Loan?> GetLoanWithFundingAsync(int loanId)
         {
             // include funders and repayments
