@@ -5,14 +5,6 @@
         public string Purpose { get; set; } = string.Empty;
         public decimal TargetAmount { get; set; }
         public decimal CurrentAmount { get; set; }
-        // Backwards-compatible amount property used by BLL
-        public decimal Amount
-        {
-            get => TargetAmount;
-            set => TargetAmount = value;
-        }
-        // Risk score computed by BLL services
-        public double RiskScore { get; set; }
         public decimal InterestRate { get; set; } = 5.0m;
         public string Status { get; set; } = "Funding"; 
         public bool IsCrowdfunded { get; set; } = true;
@@ -24,8 +16,5 @@
     
         // Navigation for funders (investors)
     public virtual ICollection<LoanFunder> Funders { get; set; } = new List<LoanFunder>();
-
-        // Navigation to borrower
-        public virtual Borrower? Borrower { get; set; }
     }
 }
