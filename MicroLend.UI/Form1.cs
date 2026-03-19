@@ -91,6 +91,72 @@ namespace MicroLend.UI
             }
         }
 
+        private void UpdateSignedInState()
+        {
+            try
+            {
+                var lbl = this.Controls.Find("lblCurrentUser", true).FirstOrDefault() as Label;
+                if (_currentUser != null)
+                {
+                    lbl.Text = $"Signed in: {_currentUser.Username} ({_currentUser.Role})";
+                }
+                else
+                {
+                    lbl.Text = "Not signed in";
+                }
+            }
+            catch { }
+        }
+
+        private async void BtnSignUp_Click(object? sender, EventArgs e)
+        {
+            try
+            {
+                using var f = new SignupForm();
+                if (f.ShowDialog(this) != DialogResult.OK) return;
+
+                var user = new MicroLend.DAL.Entities.User
+                {
+                    Username = f.Username,
+                    PasswordHash = f.Password,
+                    Role = f.Role,
+                    CreatedAt = DateTime.Now,
+                    UpdatedAt = DateTime.Now
+                };
+                var repo = new MicroLend.DAL.Repositories.Repository<MicroLend.DAL.Entities.User>();
+                await repo.AddAsync(user);
+
+                if (f.Role == "Borrower")
+                {
+                    var borrower = new MicroLend.DAL.Entities.Borrower
+                    {
+                        UserId = user.Id,
+                        Name = f.FullName,
+                        ContactNumber = f.Contact,
+                        MonthlyIncome = f.MonthlyIncome,
+                        BusinessType = f.BusinessType
+                    };
+                    var brepo = new MicroLend.DAL.Repositories.BorrowerRepository();
+                    await brepo.AddAsync(borrower);
+                }
+
+                MessageBox.Show("User created. You can now log in.");
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Sign up error: " + ex.Message);
+            }
+        }
+
+        private void BtnSignOut_Click(object? sender, EventArgs e)
+        {
+            _currentUser = null;
+            _currentBorrower = null;
+            UpdateSignedInState();
+            try { dgvLoans.DataSource = null; } catch { }
+            MessageBox.Show("Signed out.");
+        }
+
         private async Task LoadBorrowerLoansAsync(int borrowerId)
         {
             var loans = await _loanRepo.GetLoansByBorrowerAsync(borrowerId);
@@ -305,8 +371,28 @@ namespace MicroLend.UI
         // Navigation click handlers open lightweight placeholder forms
         private void BtnNavDashboard_Click(object? sender, EventArgs e)
         {
-            var f = new DashboardForm();
-            f.Show();
+            // open appropriate dashboard based on signed-in role
+            if (_currentUser == null)
+            {
+                MessageBox.Show("Please sign in to open dashboard.");
+                return;
+            }
+
+            if (string.Equals(_currentUser.Role, "Borrower", StringComparison.OrdinalIgnoreCase))
+            {
+                var b = new BorrowerDashboardForm(_currentUser.Id);
+                b.Show();
+            }
+            else if (string.Equals(_currentUser.Role, "Lender", StringComparison.OrdinalIgnoreCase))
+            {
+                var l = new LenderDashboardForm(_currentUser.Id);
+                l.Show();
+            }
+            else
+            {
+                var a = new AdminDashboardForm();
+                a.Show();
+            }
         }
 
         private void BtnNavBorrowers_Click(object? sender, EventArgs e)
