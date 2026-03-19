@@ -235,6 +235,18 @@ namespace MicroLend.UI
                 UpdatedAt = DateTime.Now
             };
 
+            // ask for payment method
+            using (var pm = new RepaymentMethodForm())
+            {
+                if (pm.ShowDialog(this) != System.Windows.Forms.DialogResult.OK)
+                {
+                    MessageBox.Show("Repayment cancelled: payment method not selected.");
+                    return;
+                }
+                repayment.PaymentMethod = pm.Method;
+                repayment.PaymentReference = pm.Reference;
+            }
+
             var repaymentRepo = new MicroLend.DAL.Repositories.Repository<MicroLend.DAL.Entities.Repayment>();
             await repaymentRepo.AddAsync(repayment);
 
@@ -291,5 +303,42 @@ namespace MicroLend.UI
         }
 
         private void txtUsername_TextChanged(object sender, EventArgs e) { }
+
+        // Navigation click handlers open lightweight placeholder forms
+        private void BtnNavDashboard_Click(object? sender, EventArgs e)
+        {
+            var f = new DashboardForm();
+            f.Show();
+        }
+
+        private void BtnNavBorrowers_Click(object? sender, EventArgs e)
+        {
+            var f = new BorrowersForm();
+            f.Show();
+        }
+
+        private void BtnNavLenders_Click(object? sender, EventArgs e)
+        {
+            var f = new LendersForm();
+            f.Show();
+        }
+
+        private void BtnNavLoans_Click(object? sender, EventArgs e)
+        {
+            var f = new LoansForm();
+            f.Show();
+        }
+
+        private void BtnNavCreditQuiz_Click(object? sender, EventArgs e)
+        {
+            var f = new CreditQuizForm();
+            f.Show();
+        }
+
+        private void BtnNavEmergency_Click(object? sender, EventArgs e)
+        {
+            var f = new EmergencyPoolForm();
+            f.Show();
+        }
     }
 }

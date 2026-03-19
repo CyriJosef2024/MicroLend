@@ -24,4 +24,10 @@ public class LoanFunderRepository : Repository<LoanFunder>
         _context.Update(funder);
         await _context.SaveChangesAsync();
     }
+
+    public async Task AddAsync(LoanFunder funder)
+    {
+        await _dbSet.AddAsync(funder);
+        await _context.SaveChangesAsync();
+    }
 }

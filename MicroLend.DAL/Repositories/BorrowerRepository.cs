@@ -22,5 +22,13 @@ namespace MicroLend.DAL.Repositories
             _context.Borrowers.Update(borrower);
             await _context.SaveChangesAsync();
         }
+
+        public async Task DeleteAsync(int id)
+        {
+            var b = await _context.Borrowers.FindAsync(id);
+            if (b == null) return;
+            _context.Borrowers.Remove(b);
+            await _context.SaveChangesAsync();
+        }
     }
 }

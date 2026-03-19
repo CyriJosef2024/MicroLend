@@ -8,6 +8,10 @@ public class Repayment
     public decimal Amount { get; set; }
     public DateTime PaymentDate { get; set; }
 
+    // Payment method used (e.g. GCash, Bank Transfer, Mobile Wallet)
+    public string PaymentMethod { get; set; } = string.Empty;
+    public string? PaymentReference { get; set; }
+
     public DateTime CreatedAt { get; set; } = DateTime.Now;
     public DateTime UpdatedAt { get; set; } = DateTime.Now;
 

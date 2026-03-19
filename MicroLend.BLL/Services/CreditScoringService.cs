@@ -84,6 +84,21 @@ namespace MicroLend.BLL.Services
         }
     }
 
+    // Expose the engine wrapper
+    public class CreditScoringFacade
+    {
+        private readonly CreditScoreEngine _engine = new CreditScoreEngine();
+        private readonly CreditScoreRepository _repo = new CreditScoreRepository();
+
+        public async Task<int> ScoreAndSaveAsync(int userId, Dictionary<int,int> answers, decimal income)
+        {
+            var s = await _engine.CalculateScoreAsync(userId, answers, income);
+            var cs = new CreditScore { UserId = userId, Score = s, QuizDate = DateTime.Now, Details = System.Text.Json.JsonSerializer.Serialize(answers) };
+            await _repo.AddAsync(cs);
+            return s;
+        }
+    }
+
     public class QuizQuestion
     {
         public int Id { get; set; }

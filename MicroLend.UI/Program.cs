@@ -19,6 +19,50 @@ namespace MicroLend.UI
         {
             // Ensure database schema is created and seed data is present
             using var ctx = new MicroLendDbContext();
+
+            // If an existing DB is present but missing columns from the current model
+            // (common during active development), recreate the DB so the model and
+            // schema match. We specifically check for the Repayments.PaymentMethod
+            // column which previously caused save errors.
+            try
+            {
+                var dbPath = System.IO.Path.Combine(AppContext.BaseDirectory, "MicroLend.db");
+                if (System.IO.File.Exists(dbPath))
+                {
+                    try
+                    {
+                        var conn = ctx.Database.GetDbConnection();
+                        conn.Open();
+                        using var cmd = conn.CreateCommand();
+                        cmd.CommandText = "PRAGMA table_info('Repayments');";
+                        using var rdr = cmd.ExecuteReader();
+                        var hasPaymentMethod = false;
+                        while (rdr.Read())
+                        {
+                            var col = rdr[1]?.ToString(); // second column is name
+                            if (string.Equals(col, "PaymentMethod", StringComparison.OrdinalIgnoreCase))
+                            {
+                                hasPaymentMethod = true;
+                                break;
+                            }
+                        }
+                        conn.Close();
+
+                        if (!hasPaymentMethod)
+                        {
+                            // Remove DB so it will be recreated with current model during EnsureCreated
+                            try { System.IO.File.Delete(dbPath); } catch { }
+                        }
+                    }
+                    catch
+                    {
+                        // ignore any introspection errors and let EnsureCreated try to proceed
+                        try { ctx.Database.CloseConnection(); } catch { }
+                    }
+                }
+            }
+            catch { }
+
             ctx.Database.EnsureCreated();
             await DataSeeder.SeedAsync(ctx);
         }
