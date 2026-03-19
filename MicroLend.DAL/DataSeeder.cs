@@ -153,28 +153,39 @@ namespace MicroLend.DAL
                 foreach (var l in lines.Skip(1))
                 {
                     var cols = SplitCsv(l);
-                    if (cols.Length < 2) continue;
-                    if (int.TryParse(cols[1], out var loanId) && loanId > 0 && !existingLoans.Contains(loanId))
-                    {
-                        // create placeholder borrower if needed
-                        if (!existingBorrowers.Contains(loanId))
-                        {
-                            var fullname = "Auto Borrower " + loanId;
-                            var contact = "auto" + loanId + "@example.com";
-                            var income = "0";
-                            var userId = loanId;
-                            if (!existingUsers.Contains(userId))
-                            {
-                                await File.AppendAllLinesAsync(usersFile, new[] { $"{userId},user{userId},password,Borrower" });
-                                existingUsers.Add(userId);
-                            }
-                            await File.AppendAllLinesAsync(borrowersFile, new[] { $"{loanId},{fullname},{contact},{income},{userId}" });
-                            existingBorrowers.Add(loanId);
-                        }
+                    if (cols.Length == 0) continue;
 
-                        toAppendLoans.Add($"{loanId},Placeholder loan for repayment,0,0,True,{loanId}");
-                        existingLoans.Add(loanId);
+                    // Support multiple CSV layouts. Common layouts:
+                    // A: Id,LoanId,AmountPaid,PaymentDate
+                    // B: LoanId,Amount,PaymentDate
+                    int? loanId = null;
+                    if (cols.Length >= 2 && int.TryParse(cols[1], out var maybeLoanFromSecond))
+                        loanId = maybeLoanFromSecond;
+                    else if (int.TryParse(cols[0], out var maybeLoanFromFirst))
+                        loanId = maybeLoanFromFirst;
+
+                    if (!loanId.HasValue || loanId.Value <= 0) continue;
+                    var lid = loanId.Value;
+                    if (existingLoans.Contains(lid)) continue;
+
+                    // create placeholder borrower if needed
+                    if (!existingBorrowers.Contains(lid))
+                    {
+                        var fullname = "Auto Borrower " + lid;
+                        var contact = "auto" + lid + "@example.com";
+                        var income = "0";
+                        var userId = lid;
+                        if (!existingUsers.Contains(userId))
+                        {
+                            await File.AppendAllLinesAsync(usersFile, new[] { $"{userId},user{userId},password,Borrower" });
+                            existingUsers.Add(userId);
+                        }
+                        await File.AppendAllLinesAsync(borrowersFile, new[] { $"{lid},{fullname},{contact},{income},{userId}" });
+                        existingBorrowers.Add(lid);
                     }
+
+                    toAppendLoans.Add($"{lid},Placeholder loan for repayment,0,0,True,{lid}");
+                    existingLoans.Add(lid);
                 }
                 if (toAppendLoans.Any()) await File.AppendAllLinesAsync(loansFile, toAppendLoans);
             }

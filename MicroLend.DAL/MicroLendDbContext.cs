@@ -1,5 +1,7 @@
 ﻿using MicroLend.DAL.Entities;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
+using System.IO;
 
 namespace MicroLend.DAL;
 
@@ -16,5 +18,9 @@ public class MicroLendDbContext : DbContext
     public DbSet<EmergencyPool> EmergencyPools { get; set; }
 
     protected override void OnConfiguring(DbContextOptionsBuilder options)
-        => options.UseSqlite("Data Source=MicroLend.db");
+    {
+        // Use an absolute path so callers that inspect the DB file (Program.cs) target the same file
+        var dbPath = Path.Combine(AppContext.BaseDirectory, "MicroLend.db");
+        options.UseSqlite($"Data Source={dbPath}");
+    }
 }

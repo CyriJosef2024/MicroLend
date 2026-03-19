@@ -46,12 +46,31 @@ namespace MicroLend.UI
                                 break;
                             }
                         }
-                        conn.Close();
-
+                        // If the column is missing, try to add it in-place so existing DB files remain usable.
                         if (!hasPaymentMethod)
                         {
-                            // Remove DB so it will be recreated with current model during EnsureCreated
-                            try { System.IO.File.Delete(dbPath); } catch { }
+                            try
+                            {
+                                // Add PaymentMethod column with a default empty string so inserts from the model succeed.
+                                using var alterCmd = conn.CreateCommand();
+                                alterCmd.CommandText = "ALTER TABLE Repayments ADD COLUMN PaymentMethod TEXT DEFAULT '';";
+                                alterCmd.ExecuteNonQuery();
+
+                                // Also add PaymentReference column (nullable) if it's not present in older DBs.
+                                using var alterCmd2 = conn.CreateCommand();
+                                alterCmd2.CommandText = "ALTER TABLE Repayments ADD COLUMN PaymentReference TEXT;";
+                                try { alterCmd2.ExecuteNonQuery(); } catch { /* ignore if fails (e.g. already exists) */ }
+                            }
+                            catch
+                            {
+                                // If we cannot alter the DB (locked or incompatible), fall back to recreating it.
+                                try { conn.Close(); } catch { }
+                                try { System.IO.File.Delete(dbPath); } catch { }
+                            }
+                        }
+                        else
+                        {
+                            try { conn.Close(); } catch { }
                         }
                     }
                     catch
@@ -63,7 +82,9 @@ namespace MicroLend.UI
             }
             catch { }
 
-            ctx.Database.EnsureCreated();
+            // Apply any pending EF Core migrations so the on-disk schema matches the model.
+            // This uses the migration files in the DAL project (we added one to add repayment columns).
+            ctx.Database.Migrate();
             await DataSeeder.SeedAsync(ctx);
         }
         catch (Exception ex)
