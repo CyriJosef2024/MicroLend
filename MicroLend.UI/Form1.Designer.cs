@@ -2,6 +2,8 @@
 {
     partial class Form1
     {
+        private Panel topPanel;
+        private Label logoLabel;
         private Panel leftPanel;
         private Button btnNavDashboard;
         private Button btnNavBorrowers;
@@ -39,6 +41,8 @@
             txtPassword = new TextBox();
             btnLogin = new Button();
             // left navigation panel and buttons
+            topPanel = new Panel();
+            logoLabel = new Label();
             leftPanel = new Panel();
             btnNavDashboard = new Button();
             btnNavBorrowers = new Button();
@@ -49,10 +53,26 @@
             dgvLoans = new DataGridView();
             ((System.ComponentModel.ISupportInitialize)dgvLoans).BeginInit();
             SuspendLayout();
+            //
+            // topPanel (header)
+            //
+            topPanel.Dock = DockStyle.Top;
+            topPanel.Height = 88;
+            topPanel.BackColor = Color.FromArgb(2, 100, 170); // deep blue
+            topPanel.Padding = new Padding(12);
+            // logo
+            logoLabel.AutoSize = true;
+            logoLabel.ForeColor = Color.White;
+            logoLabel.Font = new Font("Segoe UI Semibold", 20F, FontStyle.Bold, GraphicsUnit.Point);
+            logoLabel.Text = "MicroLend";
+            logoLabel.Location = new Point(16, 22);
+            topPanel.Controls.Add(logoLabel);
+
             // 
             // txtUsername
             // 
-            txtUsername.Location = new Point(172, 12);
+            // shift down to account for header
+            txtUsername.Location = new Point(172, 112);
             txtUsername.Name = "txtUsername";
             txtUsername.PlaceholderText = "Username";
             txtUsername.Size = new Size(200, 23);
@@ -61,7 +81,7 @@
             // 
             // txtPassword
             // 
-            txtPassword.Location = new Point(172, 41);
+            txtPassword.Location = new Point(172, 141);
             txtPassword.Name = "txtPassword";
             txtPassword.PlaceholderText = "Password";
             txtPassword.Size = new Size(200, 23);
@@ -70,7 +90,7 @@
             // 
             // btnLogin
             // 
-            btnLogin.Location = new Point(378, 12);
+            btnLogin.Location = new Point(378, 112);
             btnLogin.Name = "btnLogin";
             btnLogin.Size = new Size(75, 52);
             btnLogin.TabIndex = 2;
@@ -81,7 +101,7 @@
             // btnListUsers
             // 
             btnListUsers = new Button();
-            btnListUsers.Location = new Point(459, 12);
+            btnListUsers.Location = new Point(459, 112);
             btnListUsers.Name = "btnListUsers";
             btnListUsers.Size = new Size(100, 52);
             btnListUsers.TabIndex = 4;
@@ -92,7 +112,7 @@
             // txtLoanPurpose
             // 
             txtLoanPurpose = new TextBox();
-            txtLoanPurpose.Location = new Point(172, 80);
+            txtLoanPurpose.Location = new Point(172, 180);
             txtLoanPurpose.Name = "txtLoanPurpose";
             txtLoanPurpose.Size = new Size(200, 23);
             txtLoanPurpose.PlaceholderText = "Loan purpose (e.g. sewing machine)";
@@ -100,7 +120,7 @@
             // txtLoanAmount
             // 
             txtLoanAmount = new TextBox();
-            txtLoanAmount.Location = new Point(378, 80);
+            txtLoanAmount.Location = new Point(378, 180);
             txtLoanAmount.Name = "txtLoanAmount";
             txtLoanAmount.Size = new Size(100, 23);
             txtLoanAmount.PlaceholderText = "Amount";
@@ -108,7 +128,7 @@
             // btnCreateLoan
             // 
             btnCreateLoan = new Button();
-            btnCreateLoan.Location = new Point(484, 78);
+            btnCreateLoan.Location = new Point(484, 178);
             btnCreateLoan.Name = "btnCreateLoan";
             btnCreateLoan.Size = new Size(75, 26);
             btnCreateLoan.Text = "Create Loan";
@@ -118,7 +138,7 @@
             // txtRepaymentAmount
             // 
             txtRepaymentAmount = new TextBox();
-            txtRepaymentAmount.Location = new Point(565, 80);
+            txtRepaymentAmount.Location = new Point(565, 180);
             txtRepaymentAmount.Name = "txtRepaymentAmount";
             txtRepaymentAmount.Size = new Size(100, 23);
             txtRepaymentAmount.PlaceholderText = "Repayment";
@@ -126,7 +146,7 @@
             // btnMakeRepayment
             // 
             btnMakeRepayment = new Button();
-            btnMakeRepayment.Location = new Point(671, 78);
+            btnMakeRepayment.Location = new Point(671, 178);
             btnMakeRepayment.Name = "btnMakeRepayment";
             btnMakeRepayment.Size = new Size(100, 26);
             btnMakeRepayment.Text = "Make Repayment";
@@ -137,9 +157,9 @@
             // 
             dgvLoans.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
             dgvLoans.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.AutoSize;
-            dgvLoans.Location = new Point(172, 110);
+            dgvLoans.Location = new Point(172, 220);
             dgvLoans.Name = "dgvLoans";
-            dgvLoans.Size = new Size(760, 360);
+            dgvLoans.Size = new Size(760, 320);
             dgvLoans.TabIndex = 3;
             dgvLoans.SelectionChanged += DgvLoans_SelectionChanged;
 
@@ -147,7 +167,7 @@
             // lblSelectedLoan
             // 
             lblSelectedLoan = new Label();
-            lblSelectedLoan.Location = new Point(172, 470);
+            lblSelectedLoan.Location = new Point(172, 550);
             lblSelectedLoan.Size = new Size(400, 23);
             lblSelectedLoan.Name = "lblSelectedLoan";
             lblSelectedLoan.Text = "Selected: None";
@@ -156,7 +176,7 @@
             // lblPrediction
             // 
             lblPrediction = new Label();
-            lblPrediction.Location = new Point(420, 470);
+            lblPrediction.Location = new Point(420, 550);
             lblPrediction.Size = new Size(352, 23);
             lblPrediction.Name = "lblPrediction";
             lblPrediction.Text = "Prediction: N/A";
@@ -165,7 +185,8 @@
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
-            ClientSize = new Size(944, 520);
+            ClientSize = new Size(1000, 620);
+            Controls.Add(topPanel);
             Controls.Add(dgvLoans);
             Controls.Add(btnMakeRepayment);
             Controls.Add(txtRepaymentAmount);
