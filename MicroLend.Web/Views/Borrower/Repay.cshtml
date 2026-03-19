@@ -1,0 +1,21 @@
+@{
+    Layout = "_Layout";
+}
+<div class="container py-4">
+    <h2>Make Repayment</h2>
+    <form method="post" asp-action="RepayPost">
+        <div class="mb-3">
+            <label>Loan Id</label>
+            <input class="form-control" name="loanId" />
+        </div>
+        <div class="mb-3">
+            <label>Amount</label>
+            <input class="form-control" name="amount" />
+        </div>
+        <div class="mb-3">
+            <label>Pool Donation (optional)</label>
+            <input class="form-control" name="poolDonation" />
+        </div>
+        <button class="btn btn-primary" type="submit">Submit Repayment</button>
+    </form>
+</div>

@@ -16,13 +16,15 @@ namespace MicroLend.BLL.Services
         // Prediction Algorithm (FR2)
         public async Task<double> CalculateRepaymentPredictionScore(int borrowerId, decimal requestedAmount)
         {
+
             var borrower = await _borrowerRepo.GetByIdAsync(borrowerId);
             if (borrower == null) return 0;
 
             double score = 50; // base
 
             // Factor 1: Income-to-loan ratio (max +20)
-            if (borrower.MonthlyIncome > 0)
+  
+               if (borrower.MonthlyIncome > 0)
             {
                 double ratio = (double)(borrower.MonthlyIncome / requestedAmount);
                 score += Math.Min(20, ratio * 20);

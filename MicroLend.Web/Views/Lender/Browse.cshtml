@@ -1,0 +1,30 @@
+@model List<MicroLend.DAL.Entities.Loan>
+@{
+    Layout = "_Layout";
+}
+<div class="container py-4">
+    <h2>Browse Loans</h2>
+    <table class="table">
+        <thead><tr><th>Id</th><th>Purpose</th><th>Amount</th><th>Funded</th><th>Risk</th><th></th></tr></thead>
+        <tbody>
+        @foreach(var l in Model) {
+            <tr>
+                <td>@l.Id</td>
+                <td>@l.Purpose</td>
+                <td>@l.Amount</td>
+                <td>@l.CurrentAmount</td>
+                <td>@l.RiskScore</td>
+                <td>
+                    <form method="post" asp-action="Invest">
+                        <input type="hidden" name="loanId" value="@l.Id" />
+                        <div class="input-group">
+                            <input name="amount" class="form-control" placeholder="Amount" />
+                            <button class="btn btn-primary">Invest</button>
+                        </div>
+                    </form>
+                </td>
+            </tr>
+        }
+        </tbody>
+    </table>
+</div>

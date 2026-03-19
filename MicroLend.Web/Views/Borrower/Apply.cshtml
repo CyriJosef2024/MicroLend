@@ -1,0 +1,32 @@
+@model List<MicroLend.BLL.Services.QuizQuestion>
+@{
+    Layout = "_Layout";
+}
+<div class="container py-4">
+    <h2>Apply for Loan</h2>
+    <form method="post" asp-action="ApplyPost">
+    <form method="post" asp-action="ApplyPost" class="card p-4 bg-light">
+        <div class="mb-3">
+            <label>Amount</label>
+            <input class="form-control" name="amount" />
+        </div>
+        <div class="mb-3">
+            <label>Purpose</label>
+            <input class="form-control" name="purpose" />
+        </div>
+        <h4>Credit Quiz</h4>
+        @foreach(var q in Model)
+        {
+            <div class="mb-2">
+                <label>@q.Text</label>
+                <select class="form-select" name="q_@q.Id">
+                    @foreach(var o in q.Options)
+                    {
+                        <option value="@o.Id">@o.Text</option>
+                    }
+                </select>
+            </div>
+        }
+        <button class="btn btn-primary" type="submit">Submit Application</button>
+    </form>
+</div>

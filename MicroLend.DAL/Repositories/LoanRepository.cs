@@ -12,6 +12,16 @@ namespace MicroLend.DAL.Repositories
             return await _context.Loans.Where(l => l.BorrowerId == borrowerId).ToListAsync();
         }
 
+        public async Task<List<Loan>> GetApprovedLoansAsync()
+        {
+            return await _context.Loans.Where(l => l.Status == "Approved").ToListAsync();
+        }
+
+        public async Task<List<Loan>> GetPendingLoansAsync()
+        {
+            return await _context.Loans.Where(l => l.Status == "Pending").ToListAsync();
+        }
+
         public async Task AddAsync(Loan loan)
         {
             await _context.Loans.AddAsync(loan);
