@@ -27,6 +27,7 @@ namespace MicroLend.UI
         private readonly MicroLend.DAL.Repositories.LoanRepository _loanRepo = new MicroLend.DAL.Repositories.LoanRepository();
 
         private MicroLend.DAL.Entities.Borrower? _currentBorrower;
+        private MicroLend.DAL.Entities.User? _currentUser;
 
         public Form1()
         {
@@ -64,28 +65,25 @@ namespace MicroLend.UI
                     return;
                 }
 
-                // find borrower
+                // record current user
+                _currentUser = user;
+
+                // If user is a borrower, load borrower profile; lenders can log in without borrower profile
                 var borrowers = await _borrowerRepo.GetAllAsync();
                 var borrower = borrowers.FirstOrDefault(b => b.UserId == user.Id);
-                if (borrower == null)
+                if (borrower != null)
                 {
-                    var fallback = await _borrowerRepo.GetByIdAsync(user.Id);
-                    if (fallback != null)
-                    {
-                        fallback.UserId = user.Id;
-                        await _borrowerRepo.UpdateAsync(fallback);
-                        borrower = fallback;
-                    }
+                    _currentBorrower = borrower;
+                    await LoadBorrowerLoansAsync(borrower.Id);
+                }
+                else
+                {
+                    // no borrower linked; allow login for lender/officer/admin roles
+                    _currentBorrower = null;
+                    MessageBox.Show($"Signed in as {user.Username} ({user.Role}). No borrower profile linked.");
                 }
 
-                if (borrower == null)
-                {
-                    MessageBox.Show("No borrower profile linked to this user.");
-                    return;
-                }
-
-                _currentBorrower = borrower;
-                await LoadBorrowerLoansAsync(borrower.Id);
+                UpdateSignedInState();
             }
             catch (Exception ex)
             {

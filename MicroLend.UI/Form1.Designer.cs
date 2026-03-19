@@ -108,6 +108,35 @@
             btnListUsers.Text = "List Users";
             btnListUsers.UseVisualStyleBackColor = true;
             btnListUsers.Click += BtnListUsers_Click;
+            // Sign Up button
+            var btnSignUp = new Button();
+            btnSignUp.Location = new Point(572, 112);
+            btnSignUp.Name = "btnSignUp";
+            btnSignUp.Size = new Size(100, 52);
+            btnSignUp.TabIndex = 5;
+            btnSignUp.Text = "Sign Up";
+            btnSignUp.BackColor = Color.FromArgb(75, 181, 67); // green
+            btnSignUp.ForeColor = Color.White;
+            btnSignUp.FlatStyle = FlatStyle.Flat;
+            btnSignUp.Click += (s, e) => BtnSignUp_Click(s, e);
+            // Sign Out button
+            var btnSignOut = new Button();
+            btnSignOut.Location = new Point(686, 112);
+            btnSignOut.Name = "btnSignOut";
+            btnSignOut.Size = new Size(100, 52);
+            btnSignOut.TabIndex = 6;
+            btnSignOut.Text = "Sign Out";
+            btnSignOut.BackColor = Color.FromArgb(200, 50, 50);
+            btnSignOut.ForeColor = Color.White;
+            btnSignOut.FlatStyle = FlatStyle.Flat;
+            btnSignOut.Click += (s, e) => BtnSignOut_Click(s, e);
+            // Current user label
+            var lblUser = new Label();
+            lblUser.Location = new Point(172, 88);
+            lblUser.AutoSize = true;
+            lblUser.Name = "lblCurrentUser";
+            lblUser.Text = "Not signed in";
+            lblUser.ForeColor = Color.White;
             // 
             // txtLoanPurpose
             // 
@@ -208,6 +237,9 @@
             Controls.Add(btnApproveLoan);
             Controls.Add(btnLogin);
             Controls.Add(btnListUsers);
+            Controls.Add(btnSignUp);
+            Controls.Add(btnSignOut);
+            Controls.Add(lblUser);
             Controls.Add(txtPassword);
             Controls.Add(txtUsername);
             Name = "Form1";
