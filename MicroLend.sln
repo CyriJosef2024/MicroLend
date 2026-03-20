@@ -1,0 +1,42 @@
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.5.2.0
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MicroLend.BLL", "MicroLend.BLL\MicroLend.BLL.csproj", "{55447073-DA90-C3B6-7C24-1345B9D21159}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MicroLend.DAL", "MicroLend.DAL\MicroLend.DAL.csproj", "{C933D834-0188-92DC-4BF8-500A36E43BE1}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MicroLend.UI", "MicroLend.UI\MicroLend.UI.csproj", "{B8D3E6D9-B838-EC76-B833-3FB40575DFC7}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MicroLend.Web", "MicroLend.Web\MicroLend.Web.csproj", "{A285B402-822F-E6EC-EB7F-674F3546AC4D}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{55447073-DA90-C3B6-7C24-1345B9D21159}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{55447073-DA90-C3B6-7C24-1345B9D21159}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{55447073-DA90-C3B6-7C24-1345B9D21159}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{55447073-DA90-C3B6-7C24-1345B9D21159}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C933D834-0188-92DC-4BF8-500A36E43BE1}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C933D834-0188-92DC-4BF8-500A36E43BE1}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C933D834-0188-92DC-4BF8-500A36E43BE1}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C933D834-0188-92DC-4BF8-500A36E43BE1}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B8D3E6D9-B838-EC76-B833-3FB40575DFC7}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B8D3E6D9-B838-EC76-B833-3FB40575DFC7}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B8D3E6D9-B838-EC76-B833-3FB40575DFC7}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B8D3E6D9-B838-EC76-B833-3FB40575DFC7}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A285B402-822F-E6EC-EB7F-674F3546AC4D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A285B402-822F-E6EC-EB7F-674F3546AC4D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A285B402-822F-E6EC-EB7F-674F3546AC4D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A285B402-822F-E6EC-EB7F-674F3546AC4D}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {EC50898A-C5EF-48E6-AC01-372B8713D81D}
+	EndGlobalSection
+EndGlobal
