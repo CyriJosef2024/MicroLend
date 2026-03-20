@@ -16,6 +16,7 @@ public class MicroLendDbContext : DbContext
     public DbSet<EmergencyPoolTransaction> EmergencyPoolTransactions { get; set; }
     public DbSet<Investment> Investments { get; set; }
     public DbSet<EmergencyPool> EmergencyPools { get; set; }
+    public DbSet<Document> Documents { get; set; }
 
     protected override void OnConfiguring(DbContextOptionsBuilder options)
     {

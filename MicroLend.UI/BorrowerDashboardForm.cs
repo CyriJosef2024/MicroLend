@@ -12,6 +12,8 @@ namespace MicroLend.UI
     {
         private readonly int _userId;
         private TabControl tabControl;
+        private FlowLayoutPanel _summaryPanel;
+        private System.Collections.Generic.List<Panel> _summaryCards = new System.Collections.Generic.List<Panel>();
         private DataGridView dgvMyLoans;
         private DataGridView dgvRepayments;
         private Label lblTotalBorrowed;
@@ -40,6 +42,20 @@ namespace MicroLend.UI
             fileMenu.DropDownItems.Add(new ToolStripSeparator());
             fileMenu.DropDownItems.Add("Logout", null, (s, e) => Logout());
             fileMenu.DropDownItems.Add("Exit", null, (s, e) => { Close(); });
+            // Role-based admin access: only show admin dashboard shortcut when the current user is an admin.
+            try
+            {
+                var role = LookupUserRole(_userId);
+                if (string.Equals(role, "Admin", StringComparison.OrdinalIgnoreCase))
+                {
+                    fileMenu.DropDownItems.Add(new ToolStripSeparator());
+                    fileMenu.DropDownItems.Add("Open Admin Dashboard", null, (s, e) => OpenAdminDashboard());
+                }
+            }
+            catch
+            {
+                // If role lookup fails, do not expose the admin menu.
+            }
             
             menuStrip.Items.Add(fileMenu);
             MainMenuStrip = menuStrip;
@@ -49,105 +65,153 @@ namespace MicroLend.UI
         private void CreateDashboard()
         {
             // Summary Cards Panel
-            var summaryPanel = new FlowLayoutPanel
+            _summaryPanel = new FlowLayoutPanel
             {
                 FlowDirection = FlowDirection.LeftToRight,
-                Location = new Point(10, 40),
-                Size = new Size(970, 100),
-                AutoSize = true
+                Dock = DockStyle.Top,
+                AutoSize = true,
+                // Allow cards to wrap onto the next row on narrow windows
+                WrapContents = true,
+                Padding = new Padding(10),
+                Margin = new Padding(0)
             };
             
             // Total Borrowed Card
             var card1 = CreateSummaryCard("Total Borrowed", "₱0.00", Color.FromArgb(0, 120, 215));
             lblTotalBorrowed = card1.Controls[1] as Label;
-            summaryPanel.Controls.Add(card1);
+            _summaryCards.Add(card1);
+            _summaryPanel.Controls.Add(card1);
             
             // Total Repaid Card
             var card2 = CreateSummaryCard("Total Repaid", "₱0.00", Color.FromArgb(75, 181, 67));
             lblTotalRepaid = card2.Controls[1] as Label;
-            summaryPanel.Controls.Add(card2);
+            _summaryCards.Add(card2);
+            _summaryPanel.Controls.Add(card2);
             
             // Outstanding Card
             var card3 = CreateSummaryCard("Outstanding Balance", "₱0.00", Color.FromArgb(255, 152, 0));
             lblOutstanding = card3.Controls[1] as Label;
-            summaryPanel.Controls.Add(card3);
-            
-            Controls.Add(summaryPanel);
+            _summaryCards.Add(card3);
+            _summaryPanel.Controls.Add(card3);
+
+            Controls.Add(_summaryPanel);
+
+            // Handle resize to collapse summary cards into a single column on small widths
+            this.Resize += BorrowerDashboardForm_Resize;
+            UpdateSummaryPanelLayout();
             
             // Tab Control
             tabControl = new TabControl
             {
-                Location = new Point(10, 150),
-                Size = new Size(970, 500)
+                Dock = DockStyle.Fill
             };
             
             // My Loans Tab
             var tabLoans = new TabPage("My Loans");
             var loansPanel = new Panel { Dock = DockStyle.Fill };
-            
+
+            var loansButtonContainer = new FlowLayoutPanel
+            {
+                Dock = DockStyle.Top,
+                FlowDirection = FlowDirection.RightToLeft,
+                AutoSize = true,
+                Padding = new Padding(10),
+                WrapContents = false
+            };
+
             var btnApplyLoan = new Button
             {
                 Text = "Apply for New Loan",
-                Location = new Point(780, 10),
                 Size = new Size(150, 30),
                 BackColor = Color.FromArgb(0, 150, 136),
                 ForeColor = Color.White,
-                FlatStyle = FlatStyle.Flat
+                FlatStyle = FlatStyle.Flat,
+                Margin = new Padding(5, 0, 0, 0)
             };
             btnApplyLoan.Click += BtnApplyLoan_Click;
-            loansPanel.Controls.Add(btnApplyLoan);
-            
+            loansButtonContainer.Controls.Add(btnApplyLoan);
+
             var btnTakeQuiz = new Button
             {
                 Text = "Take Credit Quiz",
-                Location = new Point(620, 10),
                 Size = new Size(140, 30),
                 BackColor = Color.FromArgb(75, 181, 67),
                 ForeColor = Color.White,
-                FlatStyle = FlatStyle.Flat
+                FlatStyle = FlatStyle.Flat,
+                Margin = new Padding(5, 0, 0, 0)
             };
             btnTakeQuiz.Click += BtnTakeQuiz_Click;
-            loansPanel.Controls.Add(btnTakeQuiz);
-            
+            loansButtonContainer.Controls.Add(btnTakeQuiz);
+
             dgvMyLoans = new DataGridView
             {
-                Location = new Point(10, 50),
-                Size = new Size(920, 400),
+                Dock = DockStyle.Fill,
                 ReadOnly = true,
-                AutoGenerateColumns = true,
+                AutoGenerateColumns = false,
                 AllowUserToAddRows = false,
-                SelectionMode = DataGridViewSelectionMode.FullRowSelect
+                SelectionMode = DataGridViewSelectionMode.FullRowSelect,
+                AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill,
+                Margin = new Padding(10)
             };
+            // Define explicit columns so headers are stable regardless of returned projection
+            dgvMyLoans.Columns.Clear();
+            dgvMyLoans.Columns.Add(new DataGridViewTextBoxColumn { Name = "Id", HeaderText = "Loan ID", DataPropertyName = "Id", Width = 80 });
+            dgvMyLoans.Columns.Add(new DataGridViewTextBoxColumn { Name = "Purpose", HeaderText = "Purpose", DataPropertyName = "Purpose" });
+            dgvMyLoans.Columns.Add(new DataGridViewTextBoxColumn { Name = "TargetAmount", HeaderText = "Amount (₱)", DataPropertyName = "TargetAmount", DefaultCellStyle = { Format = "N2" } });
+            dgvMyLoans.Columns.Add(new DataGridViewTextBoxColumn { Name = "CurrentAmount", HeaderText = "Funded (₱)", DataPropertyName = "CurrentAmount", DefaultCellStyle = { Format = "N2" } });
+            dgvMyLoans.Columns.Add(new DataGridViewTextBoxColumn { Name = "Status", HeaderText = "Status", DataPropertyName = "Status" });
+            dgvMyLoans.Columns.Add(new DataGridViewTextBoxColumn { Name = "RiskScore", HeaderText = "Risk Score", DataPropertyName = "RiskScore" });
+            dgvMyLoans.Columns.Add(new DataGridViewTextBoxColumn { Name = "InterestRate", HeaderText = "Interest Rate (%)", DataPropertyName = "InterestRate", DefaultCellStyle = { Format = "N2" } });
+
             loansPanel.Controls.Add(dgvMyLoans);
+            loansPanel.Controls.Add(loansButtonContainer);
             tabLoans.Controls.Add(loansPanel);
             tabControl.TabPages.Add(tabLoans);
             
             // Repayments Tab
             var tabRepayments = new TabPage("Repayments");
             var repaymentsPanel = new Panel { Dock = DockStyle.Fill };
-            
+
+            var repaymentsButtonContainer = new FlowLayoutPanel
+            {
+                Dock = DockStyle.Top,
+                FlowDirection = FlowDirection.RightToLeft,
+                AutoSize = true,
+                Padding = new Padding(10),
+                WrapContents = false
+            };
+
             var btnMakePayment = new Button
             {
                 Text = "Make Payment",
-                Location = new Point(780, 10),
                 Size = new Size(150, 30),
                 BackColor = Color.FromArgb(0, 120, 215),
                 ForeColor = Color.White,
-                FlatStyle = FlatStyle.Flat
+                FlatStyle = FlatStyle.Flat,
+                Margin = new Padding(5, 0, 0, 0)
             };
             btnMakePayment.Click += BtnMakePayment_Click;
-            repaymentsPanel.Controls.Add(btnMakePayment);
-            
+            repaymentsButtonContainer.Controls.Add(btnMakePayment);
+
             dgvRepayments = new DataGridView
             {
-                Location = new Point(10, 50),
-                Size = new Size(920, 400),
+                Dock = DockStyle.Fill,
                 ReadOnly = true,
-                AutoGenerateColumns = true,
+                AutoGenerateColumns = false,
                 AllowUserToAddRows = false,
-                SelectionMode = DataGridViewSelectionMode.FullRowSelect
+                SelectionMode = DataGridViewSelectionMode.FullRowSelect,
+                AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill,
+                Margin = new Padding(10)
             };
+            dgvRepayments.Columns.Clear();
+            dgvRepayments.Columns.Add(new DataGridViewTextBoxColumn { Name = "Id", HeaderText = "Payment ID", DataPropertyName = "Id", Width = 80 });
+            dgvRepayments.Columns.Add(new DataGridViewTextBoxColumn { Name = "LoanId", HeaderText = "Loan ID", DataPropertyName = "LoanId", Width = 80 });
+            dgvRepayments.Columns.Add(new DataGridViewTextBoxColumn { Name = "Amount", HeaderText = "Amount (₱)", DataPropertyName = "Amount", DefaultCellStyle = { Format = "N2" } });
+            dgvRepayments.Columns.Add(new DataGridViewTextBoxColumn { Name = "PaymentDate", HeaderText = "Date", DataPropertyName = "PaymentDate", DefaultCellStyle = { Format = "g" } });
+            dgvRepayments.Columns.Add(new DataGridViewTextBoxColumn { Name = "PaymentMethod", HeaderText = "Method", DataPropertyName = "PaymentMethod" });
+            dgvRepayments.Columns.Add(new DataGridViewTextBoxColumn { Name = "PaymentReference", HeaderText = "Reference", DataPropertyName = "PaymentReference" });
             repaymentsPanel.Controls.Add(dgvRepayments);
+            repaymentsPanel.Controls.Add(repaymentsButtonContainer);
             tabRepayments.Controls.Add(repaymentsPanel);
             tabControl.TabPages.Add(tabRepayments);
             
@@ -264,19 +328,8 @@ namespace MicroLend.UI
                     })
                     .ToList());
                 
+                // Bind to explicitly defined columns (DataPropertyName maps to projection fields)
                 dgvMyLoans.DataSource = loans;
-                
-                if (dgvMyLoans.Columns.Count > 0)
-                {
-                    dgvMyLoans.Columns["Id"].HeaderText = "Loan ID";
-                    dgvMyLoans.Columns["Purpose"].HeaderText = "Purpose";
-                    dgvMyLoans.Columns["TargetAmount"].HeaderText = "Amount (₱)";
-                    dgvMyLoans.Columns["CurrentAmount"].HeaderText = "Funded (₱)";
-                    dgvMyLoans.Columns["Status"].HeaderText = "Status";
-                    dgvMyLoans.Columns["RiskScore"].HeaderText = "Risk Score";
-                    dgvMyLoans.Columns["InterestRate"].HeaderText = "Interest Rate (%)";
-                    dgvMyLoans.Columns["TermMonths"].HeaderText = "Term (Months)";
-                }
             }
             catch (Exception ex)
             {
@@ -317,16 +370,7 @@ namespace MicroLend.UI
                     .ToList());
                 
                 dgvRepayments.DataSource = repayments;
-                
-                if (dgvRepayments.Columns.Count > 0)
-                {
-                    dgvRepayments.Columns["Id"].HeaderText = "Payment ID";
-                    dgvRepayments.Columns["LoanId"].HeaderText = "Loan ID";
-                    dgvRepayments.Columns["AmountPaid"].HeaderText = "Amount (₱)";
-                    dgvRepayments.Columns["PaymentDate"].HeaderText = "Date";
-                    dgvRepayments.Columns["PaymentMethod"].HeaderText = "Method";
-                    dgvRepayments.Columns["PaymentReference"].HeaderText = "Reference";
-                }
+                // DataGridView has explicit columns; setting DataSource will map values by DataPropertyName
             }
             catch (Exception ex)
             {
@@ -402,6 +446,62 @@ namespace MicroLend.UI
             settingsForm.ShowDialog();
         }
         
+        private void OpenAdminDashboard()
+        {
+            // Enforce runtime role check before opening admin UI
+            try
+            {
+                var role = LookupUserRole(_userId);
+                if (!string.Equals(role, "Admin", StringComparison.OrdinalIgnoreCase))
+                {
+                    MessageBox.Show("Access denied. Admins only.", "Unauthorized", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return;
+                }
+            }
+            catch
+            {
+                MessageBox.Show("Unable to verify user role. Access denied.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
+            }
+
+            using var admin = new AdminDashboardForm();
+            admin.ShowDialog(this);
+        }
+
+        private string LookupUserRole(int userId)
+        {
+            try
+            {
+                using var ctx = new MicroLend.DAL.MicroLendDbContext();
+                var user = ctx.Users.FirstOrDefault(u => u.Id == userId);
+                return user?.Role ?? string.Empty;
+            }
+            catch
+            {
+                return string.Empty;
+            }
+        }
+
+        private void BorrowerDashboardForm_Resize(object? sender, EventArgs e)
+        {
+            UpdateSummaryPanelLayout();
+        }
+
+        private void UpdateSummaryPanelLayout()
+        {
+            // If window narrow, stack cards vertically; otherwise, show horizontally with wrapping
+            if (this.ClientSize.Width < 600)
+            {
+                _summaryPanel.FlowDirection = FlowDirection.TopDown;
+                foreach (var c in _summaryCards) c.Width = _summaryPanel.ClientSize.Width - 20;
+            }
+            else
+            {
+                _summaryPanel.FlowDirection = FlowDirection.LeftToRight;
+                foreach (var c in _summaryCards) c.Width = 300;
+            }
+        }
+
         private void Logout()
         {
             var result = MessageBox.Show("Are you sure you want to logout?", "Confirm Logout", 

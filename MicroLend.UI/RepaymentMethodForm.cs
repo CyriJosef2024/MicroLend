@@ -126,19 +126,22 @@ namespace MicroLend.UI
             
             try
             {
+                // Use BLL payment service scaffold
+                var paymentSvc = new MicroLend.BLL.Services.PaymentService();
+                var txId = paymentSvc.ProcessPaymentAsync(_loanId, amount, Method).GetAwaiter().GetResult();
+
                 using var ctx = new MicroLendDbContext();
-                
                 var repayment = new Repayment
                 {
                     LoanId = _loanId,
                     Amount = amount,
                     PaymentDate = DateTime.Now,
                     PaymentMethod = Method,
-                    PaymentReference = Reference
+                    PaymentReference = txId
                 };
-                
+
                 ctx.Repayments.Add(repayment);
-                
+
                 // Update loan status if fully repaid
                 var loan = ctx.Loans.Find(_loanId);
                 if (loan != null)
@@ -146,16 +149,16 @@ namespace MicroLend.UI
                     var totalRepaid = ctx.Repayments
                         .Where(r => r.LoanId == _loanId)
                         .Sum(r => r.Amount) + amount;
-                    
+
                     if (totalRepaid >= loan.TargetAmount)
                     {
                         loan.Status = "FullyRepaid";
                     }
                 }
-                
+
                 ctx.SaveChanges();
-                
-                MessageBox.Show("Payment submitted successfully!", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
+
+                MessageBox.Show($"Payment processed (tx: {txId})", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 DialogResult = DialogResult.OK;
             }
             catch (Exception ex)
