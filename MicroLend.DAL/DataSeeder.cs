@@ -295,6 +295,9 @@ namespace MicroLend.DAL
                 if (File.Exists(investmentsFile))
                     await SeedInvestmentsAsync(context, investmentsFile);
             }
+
+            // Ensure existing user password values are normalized to SHA256 hex
+            try { await NormalizeStoredPasswordsAsync(context); } catch (Exception ex) { Log("NormalizeStoredPasswords failed: " + ex.Message); }
         }
 
         static string[] SplitCsv(string line)
@@ -343,7 +346,7 @@ namespace MicroLend.DAL
                     var user = new User
                     {
                         Username = username,
-                        PasswordHash = password,
+                        PasswordHash = ToSha256Hex(password),
                         Role = role,
                         CreatedAt = DateTime.Now,
                         UpdatedAt = DateTime.Now
@@ -358,6 +361,40 @@ namespace MicroLend.DAL
                 catch { /* skip bad row */ }
             }
             await SafeSaveChangesAsync(context);
+        }
+
+        private static async Task NormalizeStoredPasswordsAsync(MicroLendDbContext context)
+        {
+            try
+            {
+                var users = await context.Users.ToListAsync();
+                var changed = false;
+                foreach (var u in users)
+                {
+                    var ph = (u.PasswordHash ?? string.Empty).Trim();
+                    if (string.IsNullOrEmpty(ph)) continue;
+                    // If length is 64 and all hex chars, assume already SHA256 hex
+                    if (ph.Length == 64 && System.Text.RegularExpressions.Regex.IsMatch(ph, "^[0-9A-Fa-f]{64}$"))
+                        continue;
+
+                    // Otherwise treat stored value as plaintext and replace with SHA256 hex
+                    u.PasswordHash = ToSha256Hex(ph);
+                    changed = true;
+                }
+                if (changed) await SafeSaveChangesAsync(context);
+            }
+            catch (Exception ex)
+            {
+                Log("NormalizeStoredPasswordsAsync exception: " + ex.Message);
+            }
+        }
+
+        private static string ToSha256Hex(string input)
+        {
+            if (string.IsNullOrEmpty(input)) return string.Empty;
+            using var sha256 = System.Security.Cryptography.SHA256.Create();
+            var bytes = sha256.ComputeHash(System.Text.Encoding.UTF8.GetBytes(input));
+            return Convert.ToHexString(bytes);
         }
 
         static async Task SeedBorrowersAsync(MicroLendDbContext context, string file)

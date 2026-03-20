@@ -94,7 +94,7 @@ namespace MicroLend.UI
             };
             var btnCancel = new Button { Text = "Cancel", Location = new Point(355, 230), Size = new Size(80, 35) };
             
-            btnOk.Click += BtnOk_Click;
+            btnOk.Click += async (s, e) => await BtnOk_ClickAsync(s, e);
             btnCancel.Click += (s, e) => DialogResult = DialogResult.Cancel;
 
             Controls.Add(lblTitle);
@@ -110,7 +110,7 @@ namespace MicroLend.UI
             Controls.Add(btnCancel);
         }
         
-        private void BtnOk_Click(object? sender, EventArgs e)
+        private async System.Threading.Tasks.Task BtnOk_ClickAsync(object? sender, EventArgs e)
         {
             if (!decimal.TryParse(txtAmount.Text, out var amount) || amount <= 0)
             {
@@ -128,7 +128,7 @@ namespace MicroLend.UI
             {
                 // Use BLL payment service scaffold
                 var paymentSvc = new MicroLend.BLL.Services.PaymentService();
-                var txId = paymentSvc.ProcessPaymentAsync(_loanId, amount, Method).GetAwaiter().GetResult();
+                var txId = await paymentSvc.ProcessPaymentAsync(_loanId, amount, Method);
 
                 using var ctx = new MicroLendDbContext();
                 var repayment = new Repayment
@@ -146,9 +146,8 @@ namespace MicroLend.UI
                 var loan = ctx.Loans.Find(_loanId);
                 if (loan != null)
                 {
-                    var totalRepaid = ctx.Repayments
-                        .Where(r => r.LoanId == _loanId)
-                        .Sum(r => r.Amount) + amount;
+                    // calculate total repaid including this new repayment
+                    var totalRepaid = (ctx.Repayments.Where(r => r.LoanId == _loanId).Sum(r => (decimal?)r.Amount) ?? 0m) + amount;
 
                     if (totalRepaid >= loan.TargetAmount)
                     {
