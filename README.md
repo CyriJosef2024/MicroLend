@@ -98,21 +98,22 @@ Windows Forms desktop application providing a graphical interface.
 
 **Forms:**
 
-| Form | Description |
-|------|-------------|
-| `Form1.cs` | Main login/entry point with authentication |
-| `DashboardForm.cs` | Risk dashboard for loan officers |
-| `AdminDashboardForm.cs` | Admin management interface |
-| `BorrowerDashboardForm.cs` | Borrower self-service portal |
-| `LenderDashboardForm.cs` | Lender investment dashboard |
-| `SignupForm.cs` | New user registration |
-| `BorrowersForm.cs` | Borrower CRUD operations |
-| `LoansForm.cs` | Loan management |
-| `LendersForm.cs` | Lender management |
-| `EmergencyPoolForm.cs` | Emergency fund interface |
-| `FundLoanForm.cs` | Fund contribution interface |
-| `RepaymentMethodForm.cs` | Payment processing |
-| `CreditQuizForm.cs` | Credit assessment quiz |
+ | Form | Description |
+ |------|-------------|
+ | `Form1.cs` | Main login/entry point with authentication |
+ | `LandingPageForm.cs` | Welcome landing page with system info |
+ | `AdminDashboardForm.cs` | Admin management interface |
+ | `BorrowerDashboardForm.cs` | Borrower self-service portal |
+ | `LenderDashboardForm.cs` | Lender investment dashboard |
+ | `SignupForm.cs` | New user registration (Borrower/Lender) |
+ | `AccountSettingsForm.cs` | Account settings and payment methods |
+ | `LoansForm.cs` | Loan application and management |
+ | `FundLoanForm.cs` | Fund contribution interface |
+ | `RepaymentMethodForm.cs` | Payment processing |
+ | `CreditQuizForm.cs` | Credit assessment quiz |
+ | `EmergencyPoolForm.cs` | Emergency fund interface |
+ | `BorrowersForm.cs` | Borrower CRUD operations |
+ | `LendersForm.cs` | Lender management |
 
 ---
 
@@ -134,7 +135,7 @@ ASP.NET Core MVC web application providing browser-based access.
 ### Core Features
 
 1. **User Authentication & Authorization**
-   - Role-based access control (Admin, Officer, Lender, Borrower)
+   - Role-based access control (Admin, Lender, Borrower)
    - Secure password hashing (SHA256)
 
 2. **Borrower Management**
@@ -206,6 +207,8 @@ The system comes pre-seeded with test accounts. Use the following credentials:
 | `lender_maya` | `lendpass2` |
 | `lender_john` | `lendpass3` |
 
+> **Note:** New users can sign up through the application. Only Borrower and Lender roles are available for self-registration. Admin accounts must be created directly in the database.
+
 ---
 
 ## How to Login
@@ -246,23 +249,19 @@ The system comes pre-seeded with test accounts. Use the following credentials:
 - View all dashboards
 - System configuration
 
-### Officer (Loan Officer)
-- View risk dashboard
-- Manage borrowers
-- Approve/reject loans
-- View reports
-
 ### Borrower
 - Apply for loans
 - View loan status
 - Make repayments
-- Upload documents
+- Take credit quizzes
+- Manage account settings
 
 ### Lender
 - Browse available loans
 - Fund loans
 - View investment portfolio
 - Track returns
+- Manage account settings
 
 ---
 

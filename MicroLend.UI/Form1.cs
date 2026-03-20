@@ -132,9 +132,6 @@ namespace MicroLend.UI
                 case "admin":
                     dashboard = new AdminDashboardForm();
                     break;
-                case "officer":
-                    dashboard = new DashboardForm();
-                    break;
                 case "lender":
                     dashboard = new LenderDashboardForm(user.Id);
                     break;

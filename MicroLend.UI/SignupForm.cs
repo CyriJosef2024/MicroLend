@@ -31,7 +31,7 @@ namespace MicroLend.UI
 
             var lblRole = new Label { Text = "Role", Location = new Point(16, 128), AutoSize = true };
             cmbRole = new ComboBox { Location = new Point(16, 148), Width = 240, DropDownStyle = ComboBoxStyle.DropDownList };
-            cmbRole.Items.AddRange(new[] { "Borrower", "Lender", "Officer", "Admin" });
+            cmbRole.Items.AddRange(new[] { "Borrower", "Lender" });
             cmbRole.SelectedIndex = 0;
 
             var lblFull = new Label { Text = "Full name", Location = new Point(16, 184), AutoSize = true };
