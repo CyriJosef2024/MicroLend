@@ -12,3 +12,4 @@
 # Ignore database files
 *.db
 *.sqlite
+.fake
