@@ -1,28 +1,319 @@
-# MicroLend
- Community Micro-Loan Tracker for Small Entrepreneurs. 
+# MicroLend - Community Micro-Loan Tracker
 
-Concept: 
-A system to manage small, interest-free loans within a community (like a community savings group). Tracks borrowers, loan amounts, repayment schedules, and social impact.
+A comprehensive system to manage small, interest-free loans within a community (like a community savings group). Tracks borrowers, loan amounts, repayment schedules, and social impact.
 
-Sustainable Development Goals alignment: 
-SDG 8: Decent Work and Economic Growth 
+## Sustainable Development Goals Alignment
+**SDG 8: Decent Work and Economic Growth**
 
-**Key Features**
- - Borrower Management: Full CRUD (Create, Read, Update, Delete) for managing entrepreneur profiles.
- - Loan Tracking: Manage loan amounts, purposes (like buying a sewing machine), and repayment schedules.
- - Repayment Prediction: A points-based algorithm that calculates the likelihood of on-time payment based on history and income.
- - Data Visualization: Charts showing cumulative repayments over time and loan purpose distributions.
+---
 
-Complex OOP Principles 
-- Abstraction
-- Encapsulation 
-- Polymorphism
-- Inheritance
+## System Architecture
 
+### Project Structure
 
-**Group Members:**
-* Josef, Cyr Michael
-* Bonilla, Jasmin Claire
-* Ong, Maria Shakira
-* Onia, James
-* Pariñas, Diana
+```
+MicroLend.slnx
+├── MicroLend.DAL/          # Data Access Layer
+├── MicroLend.BLL/          # Business Logic Layer
+├── MicroLend.UI/           # Windows Forms Desktop Application
+└── MicroLend.Web/          # ASP.NET Core Web Application
+```
+
+---
+
+## Architecture Layers
+
+### 1. Data Access Layer (DAL)
+**Location:** `MicroLend.DAL/`
+
+The DAL handles all database operations and entity management using Entity Framework Core with SQLite.
+
+**Components:**
+- **Entities/** - Domain models
+  - `User.cs` - User authentication and roles
+  - `Borrower.cs` - Borrower profiles with income and business info
+  - `Loan.cs` - Loan applications and tracking
+  - `Repayment.cs` - Payment records
+  - `LoanFunder.cs` - Lender contributions to crowdfunded loans
+  - `CreditScore.cs` - Credit scoring records
+  - `EmergencyPool.cs` - Community emergency fund
+
+- **Repositories/** - Data access patterns
+  - `UserRepository.cs`
+  - `BorrowerRepository.cs`
+  - `LoanRepository.cs`
+  - `RepaymentRepository.cs`
+  - `LoanFunderRepository.cs`
+  - `CreditScoreRepository.cs`
+
+- **Migrations/** - Database schema versioning
+
+**Database:** SQLite (`MicroLend.db`)
+
+---
+
+### 2. Business Logic Layer (BLL)
+**Location:** `MicroLend.BLL/`
+
+The BLL contains all business rules, algorithms, and service implementations.
+
+**Services:**
+
+- **CreditScoringService.cs** - Credit scoring algorithm
+  - Implements quiz-based credit assessment
+  - Calculates credit scores based on financial behavior
+
+- **CreditScoreEngine.cs** - Advanced credit risk evaluation
+  - Risk score calculations using multiple factors
+
+- **LoanService.cs** - Loan management
+  - `ApplyLoanAsync()` - Submit loan applications
+  - `ApproveLoanAsync()` - Approve/reject loans
+  - `CalculateRepaymentPredictionScore()` - Predicts repayment likelihood
+
+- **RepaymentService.cs** - Payment processing
+  - Records and tracks loan repayments
+
+- **InvestmentService.cs** - Lender investment management
+  - Manages fund contributions to loans
+
+- **CrowdfundingService.cs** - Crowdfunded loan handling
+  - Tracks multiple lenders per loan
+
+- **EmergencyPoolService.cs** - Community emergency fund
+  - Manages emergency loan pool transactions
+
+- **RiskDashboardService.cs** - Analytics and reporting
+  - Provides risk metrics and loan statistics
+
+- **DocumentService.cs** - Document management
+  - Handles borrower document uploads
+
+---
+
+### 3. User Interface (UI)
+**Location:** `MicroLend.UI/`
+
+Windows Forms desktop application providing a graphical interface.
+
+**Forms:**
+
+| Form | Description |
+|------|-------------|
+| `Form1.cs` | Main login/entry point with authentication |
+| `DashboardForm.cs` | Risk dashboard for loan officers |
+| `AdminDashboardForm.cs` | Admin management interface |
+| `BorrowerDashboardForm.cs` | Borrower self-service portal |
+| `LenderDashboardForm.cs` | Lender investment dashboard |
+| `SignupForm.cs` | New user registration |
+| `BorrowersForm.cs` | Borrower CRUD operations |
+| `LoansForm.cs` | Loan management |
+| `LendersForm.cs` | Lender management |
+| `EmergencyPoolForm.cs` | Emergency fund interface |
+| `FundLoanForm.cs` | Fund contribution interface |
+| `RepaymentMethodForm.cs` | Payment processing |
+| `CreditQuizForm.cs` | Credit assessment quiz |
+
+---
+
+### 4. Web Application (Web)
+**Location:** `MicroLend.Web/`
+
+ASP.NET Core MVC web application providing browser-based access.
+
+**Features:**
+- RESTful API controllers
+- Razor views for each user role
+- Session management
+- Responsive design
+
+---
+
+## System Functionality
+
+### Core Features
+
+1. **User Authentication & Authorization**
+   - Role-based access control (Admin, Officer, Lender, Borrower)
+   - Secure password hashing (SHA256)
+
+2. **Borrower Management**
+   - Profile creation and management
+   - Business type tracking
+   - Monthly income verification
+   - Credit score assignment
+
+3. **Loan Management**
+   - Individual and crowdfunded loans
+   - Application submission
+   - Approval workflow
+   - Risk score calculation
+   - Payment tracking
+
+4. **Lender Portal**
+   - Browse available loans
+   - Fund individual or crowdfunded loans
+   - Track investment portfolio
+   - View expected returns
+
+5. **Repayment System**
+   - Multiple payment methods
+   - Payment tracking and recording
+   - Payment history
+
+6. **Credit Scoring**
+   - Quiz-based credit assessment
+   - Risk prediction algorithm
+   - Score history tracking
+
+7. **Emergency Pool**
+   - Community emergency fund
+   - Emergency loan requests
+   - Fund management
+
+8. **Analytics & Reporting**
+   - Risk dashboard
+   - Loan purpose distribution
+   - Repayment trends
+   - Portfolio performance
+
+---
+
+## Login Instructions
+
+### Default Test Accounts
+
+The system comes pre-seeded with test accounts. Use the following credentials:
+
+#### 👑 Admin Account
+| Field | Value |
+|-------|-------|
+| **Username** | `admin` |
+| **Password** | `admin123` |
+| **Role** | Admin |
+
+#### 👤 Borrower Accounts
+| Username | Password | Full Name | Monthly Income |
+|----------|----------|-----------|----------------|
+| `alice` | `pass1` | Alice Smith | ₱12,000 |
+| `bob` | `pass2` | Bob Johnson | ₱15,000 |
+| `charlie` | `pass3` | Charlie Park | ₱9,000 |
+
+#### 💰 Lender Accounts
+| Username | Password |
+|----------|----------|
+| `lender_alex` | `lendpass1` |
+| `lender_maya` | `lendpass2` |
+| `lender_john` | `lendpass3` |
+
+---
+
+## How to Login
+
+### Desktop Application (UI)
+
+1. Run the application:
+   ```
+   dotnet run --project MicroLend.UI
+   ```
+
+2. The login form will appear
+
+3. Enter your username and password
+
+4. Click **Login** to access your dashboard
+
+5. New users can click **Sign Up** to create an account
+
+### Web Application
+
+1. Run the web application:
+   ```
+   dotnet run --project MicroLend.Web
+   ```
+
+2. Navigate to `http://localhost:5000`
+
+3. Login with your credentials
+
+---
+
+## User Role Capabilities
+
+### Admin
+- Full system access
+- Manage all users
+- View all dashboards
+- System configuration
+
+### Officer (Loan Officer)
+- View risk dashboard
+- Manage borrowers
+- Approve/reject loans
+- View reports
+
+### Borrower
+- Apply for loans
+- View loan status
+- Make repayments
+- Upload documents
+
+### Lender
+- Browse available loans
+- Fund loans
+- View investment portfolio
+- Track returns
+
+---
+
+## Password Requirements
+
+- Minimum 4 characters
+- SHA256 hashed for storage
+- Case-sensitive
+
+---
+
+## Database
+
+- **Type:** SQLite
+- **Location:** `MicroLend.db` (created on first run)
+- **Auto-migration:** Enabled on startup
+- **Seeding:** Sample data loaded on first run
+
+---
+
+## Building the Project
+
+### Build All Projects
+```bash
+dotnet build MicroLend.slnx
+```
+
+### Build Individual Projects
+```bash
+dotnet build MicroLend.DAL/MicroLend.DAL.csproj
+dotnet build MicroLend.BLL/MicroLend.BLL.csproj
+dotnet build MicroLend.UI/MicroLend.UI.csproj
+dotnet build MicroLend.Web/MicroLend.Web.csproj
+```
+
+---
+
+## Group Members
+
+- Josef, Cyr Michael
+- Bonilla, Jasmin Claire
+- Ong, Maria Shakira
+- Onia, James
+- Pariñas, Diana
+
+---
+
+## Technical Details
+
+- **Framework:** .NET 10.0
+- **Database:** SQLite (Entity Framework Core 10.0)
+- **UI:** Windows Forms
+- **Web:** ASP.NET Core MVC
+- **Password Hashing:** SHA256

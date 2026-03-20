@@ -1,5 +1,6 @@
 <Solution>
-  <Project Path="MicroLend.BLL/MicroLend.BLL.csproj" />
   <Project Path="MicroLend.DAL/MicroLend.DAL.csproj" />
+  <Project Path="MicroLend.BLL/MicroLend.BLL.csproj" />
   <Project Path="MicroLend.UI/MicroLend.UI.csproj" />
+  <Project Path="MicroLend.Web/MicroLend.Web.csproj" />
 </Solution>

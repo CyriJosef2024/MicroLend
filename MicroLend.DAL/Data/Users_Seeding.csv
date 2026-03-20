@@ -5,3 +5,4 @@ Id,Username,Password,Role
 4,lender_alex,lendpass1,Lender
 5,lender_maya,lendpass2,Lender
 6,lender_john,lendpass3,Lender
+7,admin,admin123,Admin

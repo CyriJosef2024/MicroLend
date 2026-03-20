@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace MicroLend.BLL.Services
 {
-    public class LoanService
+    public class LoanService : ILoanService
     {
         private readonly LoanRepository _loanRepo = new LoanRepository();
         private readonly BorrowerRepository _borrowerRepo = new BorrowerRepository();
@@ -97,6 +97,44 @@ namespace MicroLend.BLL.Services
                 loan.DateGranted = DateTime.Now;
             }
             await _loanRepo.AddAsync(loan);
+        }
+
+        public async Task<int> ApplyLoanAsync(int borrowerId, decimal amount, string purpose, int initialScore)
+        {
+            if (!await CanBorrowerGetNewLoan(borrowerId))
+                throw new InvalidOperationException("Borrower already has an active loan.");
+
+            var loan = new Loan
+            {
+                BorrowerId = borrowerId,
+                Amount = amount,
+                Purpose = purpose,
+                RiskScore = await CalculateRepaymentPredictionScore(borrowerId, amount),
+                Status = "Pending"
+            };
+
+            await _loanRepo.AddAsync(loan);
+            return loan.Id;
+        }
+
+        public async Task ApproveLoanAsync(int loanId, bool approve)
+        {
+            var loan = await _loanRepo.GetByIdAsync(loanId);
+            if (loan == null)
+                throw new InvalidOperationException("Loan not found.");
+
+            if (approve)
+            {
+                loan.Status = "Active";
+                loan.DateGranted = DateTime.Now;
+                loan.CurrentAmount = loan.Amount;
+            }
+            else
+            {
+                loan.Status = "Rejected";
+            }
+
+            await _loanRepo.UpdateAsync(loan);
         }
     }
 }
