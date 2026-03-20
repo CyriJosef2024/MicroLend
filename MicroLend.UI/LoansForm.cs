@@ -1,6 +1,8 @@
 using System;
 using System.Drawing;
 using System.Linq;
+using System.Net.Http;
+using System.Text.Json;
 using System.Windows.Forms;
 using MicroLend.DAL;
 using MicroLend.DAL.Entities;
@@ -17,22 +19,24 @@ namespace MicroLend.UI
         private ComboBox cmbStatus;
         private Button btnApply;
         private DataGridView dgvLoans;
-        
+
         public LoansForm(int userId)
         {
             _userId = userId;
             InitializeComponent();
             LoadLoans();
         }
-        
+
         private void InitializeComponent()
         {
             Text = "Apply for Loan - MicroLend";
-            Width = 800;
-            Height = 600;
+            Width = 820;
+            Height = 640;
             StartPosition = FormStartPosition.CenterParent;
             BackColor = Color.FromArgb(240, 248, 255);
-            
+            FormBorderStyle = FormBorderStyle.FixedDialog;
+            MaximizeBox = false;
+
             var titleLabel = new Label
             {
                 Text = "Apply for a Loan",
@@ -41,42 +45,55 @@ namespace MicroLend.UI
                 Location = new Point(300, 20),
                 AutoSize = true
             };
-            
-            // Application Form Panel
+
             var formPanel = new Panel
             {
                 Location = new Point(20, 70),
-                Size = new Size(350, 260),
+                Size = new Size(370, 360),
                 BackColor = Color.White,
                 Padding = new Padding(10)
             };
-            formPanel.Paint += (s, e) => {
+            formPanel.Paint += (s, e) =>
+            {
                 using var p = new Pen(Color.FromArgb(0, 120, 215));
                 e.Graphics.DrawRectangle(p, 0, 0, formPanel.Width - 1, formPanel.Height - 1);
             };
-            
+
             var lblPurpose = new Label { Text = "Loan Purpose", Location = new Point(15, 15), AutoSize = true };
-            txtPurpose = new TextBox { Location = new Point(15, 35), Width = 310 };
-            
+            txtPurpose = new TextBox { Location = new Point(15, 35), Width = 330 };
+
             var lblAmount = new Label { Text = "Amount (₱)", Location = new Point(15, 70), AutoSize = true };
             txtAmount = new TextBox { Location = new Point(15, 90), Width = 150 };
-            
+
             var lblStatus = new Label { Text = "Loan Type", Location = new Point(180, 70), AutoSize = true };
-            cmbStatus = new ComboBox { Location = new Point(180, 90), Width = 145, DropDownStyle = ComboBoxStyle.DropDownList };
+            cmbStatus = new ComboBox { Location = new Point(180, 90), Width = 165, DropDownStyle = ComboBoxStyle.DropDownList };
             cmbStatus.Items.AddRange(new[] { "Personal", "Business", "Emergency", "Education" });
             cmbStatus.SelectedIndex = 0;
-            
+
             btnApply = new Button
             {
                 Text = "Submit Application",
                 Location = new Point(15, 140),
-                Size = new Size(150, 35),
+                Size = new Size(160, 40),
                 BackColor = Color.FromArgb(0, 150, 136),
                 ForeColor = Color.White,
                 FlatStyle = FlatStyle.Flat
             };
             btnApply.Click += BtnApply_Click;
-            
+
+            btnUploadDoc = new Button
+            {
+                Text = "Upload Requirements",
+                Location = new Point(190, 140),
+                Size = new Size(160, 40),
+                BackColor = Color.FromArgb(0, 120, 215),
+                ForeColor = Color.White,
+                FlatStyle = FlatStyle.Flat
+            };
+            btnUploadDoc.Click += BtnUploadDoc_Click;
+
+            lblUploaded = new Label { Text = "No document uploaded", Location = new Point(15, 200), AutoSize = true, ForeColor = Color.Gray };
+
             formPanel.Controls.Add(lblPurpose);
             formPanel.Controls.Add(txtPurpose);
             formPanel.Controls.Add(lblAmount);
@@ -86,16 +103,15 @@ namespace MicroLend.UI
             formPanel.Controls.Add(btnApply);
             formPanel.Controls.Add(btnUploadDoc);
             formPanel.Controls.Add(lblUploaded);
-            
-            // Loans List Panel
+
             var listPanel = new Panel
             {
-                Location = new Point(390, 70),
-                Size = new Size(390, 480),
+                Location = new Point(410, 70),
+                Size = new Size(380, 520),
                 BackColor = Color.White,
                 Padding = new Padding(10)
             };
-            
+
             var lblMyLoans = new Label
             {
                 Text = "My Loan Applications",
@@ -103,11 +119,10 @@ namespace MicroLend.UI
                 Location = new Point(10, 10),
                 AutoSize = true
             };
-            
+
             dgvLoans = new DataGridView
             {
-                Location = new Point(10, 40),
-                Size = new Size(370, 430),
+                Dock = DockStyle.Fill,
                 ReadOnly = true,
                 AutoGenerateColumns = false,
                 AllowUserToAddRows = false
@@ -116,68 +131,86 @@ namespace MicroLend.UI
             dgvLoans.Columns.Add(new DataGridViewTextBoxColumn { Name = "Purpose", HeaderText = "Purpose", DataPropertyName = "Purpose" });
             dgvLoans.Columns.Add(new DataGridViewTextBoxColumn { Name = "TargetAmount", HeaderText = "Amount (₱)", DataPropertyName = "TargetAmount", DefaultCellStyle = { Format = "N2" } });
             dgvLoans.Columns.Add(new DataGridViewTextBoxColumn { Name = "Status", HeaderText = "Status", DataPropertyName = "Status" });
-            
+
             listPanel.Controls.Add(lblMyLoans);
             listPanel.Controls.Add(dgvLoans);
-            
+
             var btnClose = new Button
             {
                 Text = "Close",
-                Location = new Point(680, 555),
+                Location = new Point(700, 580),
                 Size = new Size(100, 30)
             };
             btnClose.Click += (s, e) => Close();
-            
+
             Controls.Add(titleLabel);
             Controls.Add(formPanel);
             Controls.Add(listPanel);
             Controls.Add(btnClose);
         }
-        
+
         private void LoadLoans()
         {
             try
             {
                 using var ctx = new MicroLendDbContext();
                 var borrower = ctx.Borrowers.FirstOrDefault(b => b.UserId == _userId);
-                
+
                 if (borrower == null)
                 {
                     MessageBox.Show("Borrower profile not found. Please contact support.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                     return;
                 }
-                
+
                 var loans = ctx.Loans
                     .Where(l => l.BorrowerId == borrower.Id)
                     .Select(l => new
                     {
                         l.Id,
                         l.Purpose,
-                        l.TargetAmount,
-                        l.CurrentAmount,
+                        TargetAmount = l.TargetAmount,
+                        CurrentAmount = l.CurrentAmount,
                         l.Status,
                         l.RiskScore
                     })
                     .ToList();
-                
+
                 dgvLoans.DataSource = loans;
-                
-                if (dgvLoans.Columns.Count > 0)
-                {
-                    dgvLoans.Columns["Id"].HeaderText = "Loan ID";
-                    dgvLoans.Columns["Purpose"].HeaderText = "Purpose";
-                    dgvLoans.Columns["TargetAmount"].HeaderText = "Amount (₱)";
-                    dgvLoans.Columns["CurrentAmount"].HeaderText = "Funded (₱)";
-                    dgvLoans.Columns["Status"].HeaderText = "Status";
-                    dgvLoans.Columns["RiskScore"].HeaderText = "Risk Score";
-                }
             }
             catch (Exception ex)
             {
                 MessageBox.Show("Error loading loans: " + ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
-        
+
+        private string? GetLocalApiToken()
+        {
+            try
+            {
+                var p = System.IO.Path.Combine(AppContext.BaseDirectory, "apitoken.txt");
+                if (System.IO.File.Exists(p)) return System.IO.File.ReadAllText(p).Trim();
+            }
+            catch { }
+            return null;
+        }
+
+        private void SaveUploadedDocumentMarker(int docId, string fileName)
+        {
+            try
+            {
+                var p = System.IO.Path.Combine(AppContext.BaseDirectory, "uploaded_docs.json");
+                System.Collections.Generic.List<object> list = new();
+                if (System.IO.File.Exists(p))
+                {
+                    var j = System.IO.File.ReadAllText(p);
+                    list = JsonSerializer.Deserialize<System.Collections.Generic.List<object>>(j) ?? new();
+                }
+                list.Add(new { id = docId, file = fileName, uploaded = System.DateTime.Now });
+                System.IO.File.WriteAllText(p, JsonSerializer.Serialize(list));
+            }
+            catch { }
+        }
+
         private void BtnApply_Click(object? sender, EventArgs e)
         {
             if (string.IsNullOrWhiteSpace(txtPurpose.Text))
@@ -185,32 +218,31 @@ namespace MicroLend.UI
                 MessageBox.Show("Please enter loan purpose.", "Validation Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
-            
+
             if (!decimal.TryParse(txtAmount.Text, out var amount) || amount <= 0)
             {
                 MessageBox.Show("Please enter a valid amount.", "Validation Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
-            
+
             try
             {
                 using var ctx = new MicroLendDbContext();
                 var borrower = ctx.Borrowers.FirstOrDefault(b => b.UserId == _userId);
-                
+
                 if (borrower == null)
                 {
                     MessageBox.Show("Borrower profile not found.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                     return;
                 }
 
-                // Require at least one uploaded document before applying
-                var hasDoc = ctx.EmergencyPools.Any(); // placeholder check - replace with real document table if available
+                var hasDoc = ctx.Documents.Any(d => d.UserId == _userId);
                 if (!hasDoc)
                 {
                     MessageBox.Show("You must upload required documents before applying. Use 'Upload Requirements' button.", "Requirements Missing", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                     return;
                 }
-                
+
                 var loan = new Loan
                 {
                     Purpose = $"[{cmbStatus.SelectedItem}] {txtPurpose.Text}",
@@ -223,17 +255,17 @@ namespace MicroLend.UI
                     RiskScore = 0,
                     DateGranted = DateTime.Now
                 };
-                
+
                 ctx.Loans.Add(loan);
                 ctx.SaveChanges();
-                
+
                 MessageBox.Show("Loan application submitted successfully!", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                
+
                 txtPurpose.Clear();
                 txtAmount.Clear();
-                
+
                 LoadLoans();
-                
+
                 DialogResult = DialogResult.OK;
             }
             catch (Exception ex)
@@ -249,26 +281,41 @@ namespace MicroLend.UI
 
             try
             {
-                // In the BLL the document service accepts object to avoid ASP.NET types. Here we'll call the web controller endpoint
-                // but since this is a WinForms client, for now we save a local marker in DB (simplified).
-                using var ctx = new MicroLendDbContext();
-                var borrower = ctx.Borrowers.FirstOrDefault(b => b.UserId == _userId);
-                if (borrower == null)
+                using var client = new HttpClient();
+                using var fs = System.IO.File.OpenRead(ofd.FileName);
+                using var content = new MultipartFormDataContent();
+                var streamContent = new StreamContent(fs);
+                streamContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("application/octet-stream");
+                content.Add(streamContent, "file", System.IO.Path.GetFileName(ofd.FileName));
+
+                var url = "http://localhost:5000/Borrower/UploadDocument";
+                var token = GetLocalApiToken();
+                if (!string.IsNullOrEmpty(token))
                 {
-                    MessageBox.Show("Borrower profile not found.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+                    content.Headers.Add("X-Requested-With", "XMLHttpRequest");
+                }
+
+                var resp = await client.PostAsync(url, content);
+                if (!resp.IsSuccessStatusCode)
+                {
+                    MessageBox.Show("Upload failed: " + resp.ReasonPhrase, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                     return;
                 }
 
-                // Create a Document record instead of misusing EmergencyPool
-                var doc = new MicroLend.DAL.Entities.Document
+                var json = await resp.Content.ReadAsStringAsync();
+                try
                 {
-                    UserId = _userId,
-                    FileName = System.IO.Path.GetFileName(ofd.FileName),
-                    FilePath = ofd.FileName,
-                    UploadedAt = DateTime.Now
-                };
-                ctx.Documents.Add(doc);
-                await ctx.SaveChangesAsync();
+                    var obj = JsonDocument.Parse(json);
+                    if (obj.RootElement.TryGetProperty("id", out var idEl))
+                    {
+                        var docId = idEl.GetInt32();
+                        SaveUploadedDocumentMarker(docId, ofd.FileName);
+                        lblUploaded.Text = "Document uploaded (id: " + docId + ")";
+                        return;
+                    }
+                }
+                catch { }
 
                 lblUploaded.Text = "Document uploaded: " + System.IO.Path.GetFileName(ofd.FileName);
             }

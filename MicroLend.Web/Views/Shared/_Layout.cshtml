@@ -27,9 +27,19 @@
                     <li class="nav-item"><a class="nav-link text-white" href="/">Home</a></li>
                     <li class="nav-item"><a class="nav-link text-white" href="/Borrower/Dashboard">Borrower</a></li>
                     <li class="nav-item"><a class="nav-link text-white" href="/Lender/Dashboard">Lender</a></li>
-                    <li class="nav-item"><a class="nav-link text-white" href="/Admin/Dashboard">Admin</a></li>
-                    <li class="nav-item"><a class="nav-link text-white" href="/Account/Login">Login</a></li>
-                    <li class="nav-item ms-2"><a class="btn btn-cta" href="/Account/Register">Sign up</a></li>
+                    @if (User?.IsInRole("Admin") == true)
+                    {
+                        <li class="nav-item"><a class="nav-link text-white" href="/Admin/Dashboard">Admin</a></li>
+                    }
+                    @if (User?.Identity?.IsAuthenticated == true)
+                    {
+                        <li class="nav-item"><a class="nav-link text-white" href="/Account/Logout">Logout</a></li>
+                    }
+                    else
+                    {
+                        <li class="nav-item"><a class="nav-link text-white" href="/Account/Login">Login</a></li>
+                        <li class="nav-item ms-2"><a class="btn btn-cta" href="/Account/Register">Sign up</a></li>
+                    }
                 </ul>
             </div>
         </nav>

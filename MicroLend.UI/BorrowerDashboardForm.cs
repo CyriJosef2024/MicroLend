@@ -28,7 +28,10 @@ namespace MicroLend.UI
             Height = 700;
             StartPosition = FormStartPosition.CenterParent;
             BackColor = Color.FromArgb(240, 248, 255);
-            
+            // Allow the form to scroll if the window is too small for content
+            this.AutoScroll = true;
+            this.AutoScaleMode = AutoScaleMode.Dpi;
+
             CreateMenuBar();
             CreateDashboard();
         }

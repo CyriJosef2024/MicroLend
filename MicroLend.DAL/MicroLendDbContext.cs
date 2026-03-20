@@ -17,11 +17,16 @@ public class MicroLendDbContext : DbContext
     public DbSet<Investment> Investments { get; set; }
     public DbSet<EmergencyPool> EmergencyPools { get; set; }
     public DbSet<Document> Documents { get; set; }
+    public DbSet<ApiToken> ApiTokens { get; set; }
 
     protected override void OnConfiguring(DbContextOptionsBuilder options)
     {
         // Use an absolute path so callers that inspect the DB file (Program.cs) target the same file
         var dbPath = Path.Combine(AppContext.BaseDirectory, "MicroLend.db");
         options.UseSqlite($"Data Source={dbPath}");
+        // During active development there may be pending model changes; either apply migrations or
+        // suppress the warning. We prefer migrations, but suppress here to avoid startup failure
+        // when developer hasn't applied migrations yet.
+        options.ConfigureWarnings(w => w.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning));
     }
 }

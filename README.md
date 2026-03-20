@@ -280,6 +280,43 @@ The system comes pre-seeded with test accounts. Use the following credentials:
 - **Auto-migration:** Enabled on startup
 - **Seeding:** Sample data loaded on first run
 
+### Applying EF Migrations (development)
+
+This project uses Entity Framework Core migrations stored in `MicroLend.DAL/Migrations`. To apply migrations manually or when deploying, run the following from the solution root:
+
+1. Add a new migration (if you modify entities):
+
+   ```powershell
+   cd MicroLend.DAL
+   dotnet ef migrations add YourMigrationName
+   ```
+
+2. Apply migrations to the database (the Web app is used as the startup project here):
+
+   ```powershell
+   dotnet ef database update -p MicroLend.DAL -s MicroLend.Web
+   ```
+
+3. The WinForms `Program.Main` also calls `Database.Migrate()` on startup for convenience during development; however, for production it's recommended to run migrations explicitly and verify schema changes.
+
+## Deployment notes
+
+- Start the web server first to enable authenticated upload and API calls used by the desktop client:
+  - `dotnet run --project MicroLend.Web`
+  - Ensure it listens on `http://localhost:5000` as configured in `Program.cs`.
+- When using the desktop client, create a local API token file before calling upload (development convenience):
+  - Create `apitoken.txt` in the application directory containing a valid bearer token.
+  - This demo stores tokens locally; in production use a proper secure token store and authentication flow.
+
+## Payment provider
+
+The repository includes a payment service scaffold that posts to an example endpoint. To integrate a real provider:
+
+- Recommended: Stripe (credit card) or Paymongo (Philippine cards/payments). Tell me which provider you prefer and I will implement it.
+- You will need provider API keys; store them securely (user-secrets, environment variables, or Azure Key Vault) and never commit them to source control.
+
+
+
 ---
 
 ## Building the Project

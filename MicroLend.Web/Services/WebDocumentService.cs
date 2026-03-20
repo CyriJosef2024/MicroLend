@@ -17,7 +17,7 @@ namespace MicroLend.Web.Services
             var path = Path.Combine(uploads, fileName);
             using var fs = new FileStream(path, FileMode.Create);
             await file.CopyToAsync(fs);
-            return "/uploads/" + fileName;
+            return "/uploads/" + fileName; // Updated return statement
         }
     }
 }

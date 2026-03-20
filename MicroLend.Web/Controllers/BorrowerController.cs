@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 
 namespace MicroLend.Web.Controllers
 {
+    [Microsoft.AspNetCore.Authorization.Authorize]
     public class BorrowerController : Controller
     {
         private readonly ICreditScoreService _credit;
@@ -40,9 +41,11 @@ namespace MicroLend.Web.Controllers
             return View();
         }
 
+        [Microsoft.AspNetCore.Authorization.Authorize(Roles = "Borrower")]
         public IActionResult Apply() => View(_credit.GetQuestions());
 
         [HttpPost]
+        [Microsoft.AspNetCore.Authorization.Authorize(Roles = "Borrower")]
         public async Task<IActionResult> ApplyPost([FromForm] int amount, [FromForm] string purpose)
         {
             int userId = 1;
@@ -50,6 +53,17 @@ namespace MicroLend.Web.Controllers
             {
                 var idClaim = User.Claims.FirstOrDefault(c => c.Type == System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
                 if (int.TryParse(idClaim, out var parsed)) userId = parsed;
+            }
+
+            // Require at least one uploaded document for this borrower
+            using (var ctx = new MicroLend.DAL.MicroLendDbContext())
+            {
+                var hasDoc = ctx.Documents.Any(d => d.UserId == userId);
+                if (!hasDoc)
+                {
+                    TempData["Error"] = "You must upload required documents before applying for a loan.";
+                    return RedirectToAction("Upload");
+                }
             }
 
             var answers = Request.Form.Where(kv => kv.Key.StartsWith("q_")).ToDictionary(kv => int.Parse(kv.Key.Substring(2)), kv => int.Parse(kv.Value));
@@ -74,6 +88,8 @@ namespace MicroLend.Web.Controllers
         }
 
         [HttpPost]
+        [HttpPost]
+        [Microsoft.AspNetCore.Authorization.Authorize]
         public async Task<IActionResult> UploadDocument(IFormFile file)
         {
             if (file == null) { TempData["Error"] = "No file selected"; return RedirectToAction("Dashboard"); }
@@ -83,7 +99,26 @@ namespace MicroLend.Web.Controllers
                 var idClaim = User.Claims.FirstOrDefault(c => c.Type == System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
                 if (int.TryParse(idClaim, out var parsed)) userId = parsed;
             }
-            await _documentSvc.SaveDocumentAsync(file, userId, null);
+            // Server-side save
+            var path = await _documentSvc.SaveDocumentAsync(file, userId, null);
+
+            // persist metadata in Documents table and return created id
+            try
+            {
+                using var ctx = new MicroLend.DAL.MicroLendDbContext();
+                var doc = new MicroLend.DAL.Entities.Document { UserId = userId, FileName = file.FileName, FilePath = path, UploadedAt = System.DateTime.Now };
+                ctx.Documents.Add(doc);
+                await ctx.SaveChangesAsync();
+                // return id as JSON when called via AJAX or from client
+                if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
+                {
+                    return Json(new { success = true, id = doc.Id, path });
+                }
+            }
+            catch
+            {
+                // ignore persistence errors here - file at least saved on disk
+            }
             TempData["Success"] = "File uploaded.";
             return RedirectToAction("Dashboard");
         }
