@@ -316,3 +316,6 @@ dotnet build MicroLend.Web/MicroLend.Web.csproj
 - **UI:** Windows Forms
 - **Web:** ASP.NET Core MVC
 - **Password Hashing:** SHA256
+
+
+Adding Additional Co-Authors for testing. 
