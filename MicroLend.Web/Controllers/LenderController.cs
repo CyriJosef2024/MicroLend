@@ -16,19 +16,31 @@ namespace MicroLend.Web.Controllers
 
         public async Task<IActionResult> Browse()
         {
-            var allLoans = await _loanRepo.GetLoansByBorrowerIdAsync(0); // will return empty; use context directly if needed
-            // Fallback: load all and filter Approved
-            var loansCtx = await _loanRepo.GetLoansByBorrowerAsync(0);
-            var list = loansCtx.Where(l => l.Status == "Approved").ToList();
+            // Load all approved loans
+            var list = await _loanRepo.GetApprovedLoansAsync();
             return View(list);
         }
 
         [HttpPost]
         public async Task<IActionResult> Invest(int loanId, decimal amount)
         {
-            var id = await _invest.CreateInvestmentAsync(1, loanId, amount);
+            int lenderId = 1;
+            if (User.Identity?.IsAuthenticated == true)
+            {
+                var idClaim = User.Claims.FirstOrDefault(c => c.Type == System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+                if (int.TryParse(idClaim, out var parsed)) lenderId = parsed;
+            }
+
+            var id = await _invest.CreateInvestmentAsync(lenderId, loanId, amount);
             TempData["Success"] = "Investment created and pending approval.";
             return RedirectToAction("Dashboard");
+        }
+
+        public async Task<IActionResult> Details(int id)
+        {
+            var loan = await _loanRepo.GetLoanWithFundingAsync(id);
+            if (loan == null) return NotFound();
+            return View(loan);
         }
     }
 }

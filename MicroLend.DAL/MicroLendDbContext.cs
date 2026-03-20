@@ -21,8 +21,19 @@ public class MicroLendDbContext : DbContext
 
     protected override void OnConfiguring(DbContextOptionsBuilder options)
     {
-        // Use an absolute path so callers that inspect the DB file (Program.cs) target the same file
-        var dbPath = Path.Combine(AppContext.BaseDirectory, "MicroLend.db");
+        // Allow an environment variable to override the DB path so multiple projects
+        // (Web and WinForms) can be pointed at the same file during local testing.
+        var env = System.Environment.GetEnvironmentVariable("MICROLEND_DB_PATH");
+        var dbPath = string.IsNullOrWhiteSpace(env)
+            ? Path.Combine(System.Environment.GetFolderPath(System.Environment.SpecialFolder.LocalApplicationData), "MicroLend", "MicroLend.db")
+            : env;
+        // Ensure the directory for the SQLite file exists. If the directory doesn't exist
+        // SQLite will fail with "unable to open database file" when trying to create the file.
+        var dbDir = Path.GetDirectoryName(dbPath);
+        if (!string.IsNullOrEmpty(dbDir) && !Directory.Exists(dbDir))
+        {
+            Directory.CreateDirectory(dbDir);
+        }
         options.UseSqlite($"Data Source={dbPath}");
         // During active development there may be pending model changes; either apply migrations or
         // suppress the warning. We prefer migrations, but suppress here to avoid startup failure

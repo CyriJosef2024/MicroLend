@@ -11,6 +11,16 @@ namespace MicroLend.UI
     public class LenderDashboardForm : Form
     {
         private readonly int _userId;
+        private bool _agreementsSigned = false;
+        private ComboBox cbRiskFilter;
+        private NumericUpDown nudMaxRemainingFilter;
+        private TextBox txtPurposeFilter;
+        private Button btnApplyFilter;
+        private Button btnClearFilter;
+        private Button btnViewDetails;
+        private Button btnSignAgreement;
+        private DataGridView dgvAnalytics;
+        private DataGridView dgvEarnings;
         private TabControl tabControl;
         private DataGridView dgvInvestments;
         private DataGridView dgvAvailableLoans;
@@ -30,6 +40,49 @@ namespace MicroLend.UI
             
             CreateMenuBar();
             CreateDashboard();
+        }
+
+        private bool ShowAgreementDialog()
+        {
+            using var dlg = new Form { Text = "Investment Agreement", Width = 640, Height = 460, StartPosition = FormStartPosition.CenterParent };
+            var txt = new TextBox { Multiline = true, ReadOnly = true, Dock = DockStyle.Fill, Text = "[Investment Agreement Terms]\r\n\r\nBy signing you agree to terms of funding and accept the risks." };
+            var btnAccept = new Button { Text = "I Agree", Dock = DockStyle.Bottom, Height = 36, BackColor = Color.FromArgb(0,133,119), ForeColor = Color.White, FlatStyle = FlatStyle.Flat };
+            var btnCancel = new Button { Text = "Cancel", Dock = DockStyle.Bottom, Height = 36 };
+            btnAccept.Click += (s, e) => { dlg.DialogResult = DialogResult.OK; dlg.Close(); };
+            btnCancel.Click += (s, e) => { dlg.DialogResult = DialogResult.Cancel; dlg.Close(); };
+            dlg.Controls.Add(txt); dlg.Controls.Add(btnAccept); dlg.Controls.Add(btnCancel);
+            return dlg.ShowDialog(this) == DialogResult.OK;
+        }
+
+        private async Task LoadAnalyticsAsync()
+        {
+            try
+            {
+                var ctx = new MicroLendDbContext();
+                // simple portfolio aggregation
+                var investments = await Task.Run(() => ctx.LoanFunders.Where(f => f.LenderId == _userId).ToList());
+                var agg = investments.GroupBy(f => f.LoanId).Select(g => new
+                {
+                    LoanId = g.Key,
+                    TotalInvested = g.Sum(x => x.Amount),
+                    ExpectedInterest = g.Sum(x => x.ExpectedInterest),
+                    Count = g.Count()
+                }).ToList();
+                dgvAnalytics.DataSource = agg;
+            }
+            catch { }
+        }
+
+        private async Task LoadEarningsAsync()
+        {
+            try
+            {
+                var ctx = new MicroLendDbContext();
+                var earnings = await Task.Run(() => ctx.LoanFunders.Where(f => f.LenderId == _userId)
+                    .Select(f => new { f.LoanId, f.Amount, f.ExpectedInterest, f.FundingDate }).ToList());
+                dgvEarnings.DataSource = earnings;
+            }
+            catch { }
         }
         
         private void CreateMenuBar()
@@ -59,17 +112,18 @@ namespace MicroLend.UI
             };
             
             // Total Invested Card
-            var card1 = CreateSummaryCard("Total Invested", "₱0.00", Color.FromArgb(0, 120, 215));
+            var fintechGreen = Color.FromArgb(0, 133, 119); // #008577 approximate
+            var card1 = CreateSummaryCard("Total Invested", "₱0.00", fintechGreen);
             lblTotalInvested = card1.Controls[1] as Label;
             summaryPanel.Controls.Add(card1);
             
             // Expected Returns Card
-            var card2 = CreateSummaryCard("Expected Returns", "₱0.00", Color.FromArgb(75, 181, 67));
+            var card2 = CreateSummaryCard("Expected Returns", "₱0.00", fintechGreen);
             lblTotalReturns = card2.Controls[1] as Label;
             summaryPanel.Controls.Add(card2);
             
             // Active Loans Card
-            var card3 = CreateSummaryCard("Active Funded Loans", "0", Color.FromArgb(255, 152, 0));
+            var card3 = CreateSummaryCard("Active Funded Loans", "0", fintechGreen);
             lblActiveLoans = card3.Controls[1] as Label;
             summaryPanel.Controls.Add(card3);
             
@@ -114,12 +168,35 @@ namespace MicroLend.UI
                 Text = "Fund Selected Loan",
                 Location = new Point(780, 5),
                 Size = new Size(150, 30),
-                BackColor = Color.FromArgb(0, 150, 136),
+                BackColor = fintechGreen,
                 ForeColor = Color.White,
                 FlatStyle = FlatStyle.Flat
             };
             btnFund.Click += BtnFund_Click;
             browsePanel.Controls.Add(btnFund);
+            // Filter controls
+            txtPurposeFilter = new TextBox { Location = new Point(10, 10), Width = 240, PlaceholderText = "Purpose contains..." };
+            cbRiskFilter = new ComboBox { Location = new Point(260, 10), Width = 140, DropDownStyle = ComboBoxStyle.DropDownList };
+            cbRiskFilter.Items.AddRange(new object[] { "Any", "Low", "Medium", "High" });
+            cbRiskFilter.SelectedIndex = 0;
+            nudMaxRemainingFilter = new NumericUpDown { Location = new Point(410, 10), Width = 120, Minimum = 0, Maximum = 10000000, DecimalPlaces = 2, Value = 0 };
+            var lblRemaining = new Label { Text = "Max Remaining (₱)", Location = new Point(410, -6), AutoSize = true };
+            btnApplyFilter = new Button { Text = "Apply Filter", Location = new Point(540, 8), Size = new Size(100, 28), BackColor = fintechGreen, ForeColor = Color.White, FlatStyle = FlatStyle.Flat };
+            btnClearFilter = new Button { Text = "Clear", Location = new Point(648, 8), Size = new Size(60, 28) };
+            btnViewDetails = new Button { Text = "View Details", Location = new Point(718, 8), Size = new Size(100, 28) };
+            btnSignAgreement = new Button { Text = "Sign Agreement", Location = new Point(826, 8), Size = new Size(120, 28), BackColor = fintechGreen, ForeColor = Color.White, FlatStyle = FlatStyle.Flat };
+            browsePanel.Controls.Add(txtPurposeFilter);
+            browsePanel.Controls.Add(cbRiskFilter);
+            browsePanel.Controls.Add(lblRemaining);
+            browsePanel.Controls.Add(nudMaxRemainingFilter);
+            browsePanel.Controls.Add(btnApplyFilter);
+            browsePanel.Controls.Add(btnClearFilter);
+            browsePanel.Controls.Add(btnViewDetails);
+            browsePanel.Controls.Add(btnSignAgreement);
+            btnApplyFilter.Click += (s, e) => _ = LoadAvailableLoansAsync();
+            btnClearFilter.Click += (s, e) => { txtPurposeFilter.Text = ""; cbRiskFilter.SelectedIndex = 0; nudMaxRemainingFilter.Value = 0; _ = LoadAvailableLoansAsync(); };
+            btnViewDetails.Click += (s, e) => { BtnFund_Click(s, e); };
+            btnSignAgreement.Click += (s, e) => { _agreementsSigned = ShowAgreementDialog(); if (_agreementsSigned) MessageBox.Show("Agreement signed. You may now fund loans.", "Agreement", MessageBoxButtons.OK, MessageBoxIcon.Information); };
             
             dgvAvailableLoans = new DataGridView
             {
@@ -146,6 +223,31 @@ namespace MicroLend.UI
             };
             tabFunded.Controls.Add(dgvMyFundedLoans);
             tabControl.TabPages.Add(tabFunded);
+
+            // Analytics Tab
+            var tabAnalytics = new TabPage("Portfolio Analytics");
+            dgvAnalytics = new DataGridView { Dock = DockStyle.Fill, ReadOnly = true, AutoGenerateColumns = true };
+            tabAnalytics.Controls.Add(dgvAnalytics);
+            tabControl.TabPages.Add(tabAnalytics);
+
+            // Earnings Tracker
+            var tabEarnings = new TabPage("Earnings Tracker");
+            dgvEarnings = new DataGridView { Dock = DockStyle.Fill, ReadOnly = true, AutoGenerateColumns = true };
+            tabEarnings.Controls.Add(dgvEarnings);
+            tabControl.TabPages.Add(tabEarnings);
+
+            // Settings Tab
+            var tabSettings = new TabPage("Settings");
+            var settingsPanel = new Panel { Dock = DockStyle.Fill, Padding = new Padding(20) };
+            var lblProfile = new Label { Text = "Profile", Font = new Font("Segoe UI", 12, FontStyle.Bold), Location = new Point(10, 10), AutoSize = true };
+            var txtContact = new TextBox { Location = new Point(10, 50), Width = 400, PlaceholderText = "Contact email or phone" };
+            var btnSaveSettings = new Button { Text = "Save", Location = new Point(420, 48), BackColor = fintechGreen, ForeColor = Color.White, FlatStyle = FlatStyle.Flat };
+            var btnContactSupport = new Button { Text = "Contact Support", Location = new Point(500, 48) };
+            btnSaveSettings.Click += (s, e) => MessageBox.Show("Settings saved.", "Settings", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            btnContactSupport.Click += (s, e) => MessageBox.Show("Support request sent.", "Support", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            settingsPanel.Controls.Add(lblProfile); settingsPanel.Controls.Add(txtContact); settingsPanel.Controls.Add(btnSaveSettings); settingsPanel.Controls.Add(btnContactSupport);
+            tabSettings.Controls.Add(settingsPanel);
+            tabControl.TabPages.Add(tabSettings);
             
             Controls.Add(tabControl);
             
@@ -195,6 +297,8 @@ namespace MicroLend.UI
             await LoadAvailableLoansAsync();
             await LoadFundedLoansAsync();
             UpdateSummary();
+            await LoadAnalyticsAsync();
+            await LoadEarningsAsync();
         }
         
         private async Task LoadInvestmentsAsync()
@@ -236,19 +340,34 @@ namespace MicroLend.UI
             try
             {
                 var ctx = new MicroLendDbContext();
-                var loans = await Task.Run(() => ctx.Loans
-                    .Where(l => l.Status == "Approved" && l.CurrentAmount < l.TargetAmount)
-                    .Select(l => new
-                    {
-                        l.Id,
-                        l.Purpose,
-                        TargetAmount = l.TargetAmount,
-                        CurrentAmount = l.CurrentAmount,
-                        Remaining = l.TargetAmount - l.CurrentAmount,
-                        l.Status,
-                        l.RiskScore
-                    })
-                    .ToList());
+                // Apply simple filters from filter controls
+                var q = ctx.Loans.AsQueryable();
+                q = q.Where(l => l.Status == "Approved" && l.CurrentAmount < l.TargetAmount);
+                if (!string.IsNullOrWhiteSpace(txtPurposeFilter?.Text)) q = q.Where(l => l.Purpose.Contains(txtPurposeFilter.Text));
+                if (cbRiskFilter != null && cbRiskFilter.SelectedIndex > 0)
+                {
+                    var sel = cbRiskFilter.SelectedItem.ToString();
+                    // Simplified risk mapping
+                    if (sel == "Low") q = q.Where(l => l.RiskScore <= 33);
+                    if (sel == "Medium") q = q.Where(l => l.RiskScore > 33 && l.RiskScore <= 66);
+                    if (sel == "High") q = q.Where(l => l.RiskScore > 66);
+                }
+                if (nudMaxRemainingFilter != null && nudMaxRemainingFilter.Value > 0)
+                {
+                    var maxRem = nudMaxRemainingFilter.Value;
+                    q = q.Where(l => (l.TargetAmount - l.CurrentAmount) <= maxRem);
+                }
+
+                var loans = await Task.Run(() => q.Select(l => new
+                {
+                    l.Id,
+                    l.Purpose,
+                    TargetAmount = l.TargetAmount,
+                    CurrentAmount = l.CurrentAmount,
+                    Remaining = l.TargetAmount - l.CurrentAmount,
+                    l.Status,
+                    l.RiskScore
+                }).ToList());
                 
                 dgvAvailableLoans.DataSource = loans;
                 

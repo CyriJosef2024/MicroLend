@@ -247,13 +247,14 @@ namespace MicroLend.UI
                 {
                     Purpose = $"[{cmbStatus.SelectedItem}] {txtPurpose.Text}",
                     TargetAmount = amount,
+                    Amount = amount,
                     CurrentAmount = 0,
                     Status = "Pending",
                     InterestRate = 5.0m,
                     IsCrowdfunded = true,
                     BorrowerId = borrower.Id,
                     RiskScore = 0,
-                    DateGranted = DateTime.Now
+                    DateGranted = null // DateGranted will be set when lender funds and admin approves
                 };
 
                 ctx.Loans.Add(loan);
@@ -288,19 +289,70 @@ namespace MicroLend.UI
                 streamContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("application/octet-stream");
                 content.Add(streamContent, "file", System.IO.Path.GetFileName(ofd.FileName));
 
-                var url = "http://localhost:5000/Borrower/UploadDocument";
+                // Try local web project URL(s). The Web project's launchSettings uses ports 54433/54434 by default.
+                var candidateUrls = new[] { "http://localhost:54434/Borrower/UploadDocument", "https://localhost:54433/Borrower/UploadDocument" };
+                string url = candidateUrls[0];
                 var token = GetLocalApiToken();
                 if (!string.IsNullOrEmpty(token))
                 {
                     client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
                     content.Headers.Add("X-Requested-With", "XMLHttpRequest");
                 }
-
-                var resp = await client.PostAsync(url, content);
-                if (!resp.IsSuccessStatusCode)
+                System.Net.Http.HttpResponseMessage? resp = null;
+                System.Exception? lastEx = null;
+                foreach (var tryUrl in candidateUrls)
                 {
-                    MessageBox.Show("Upload failed: " + resp.ReasonPhrase, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                    return;
+                    try
+                    {
+                        resp = await client.PostAsync(tryUrl, content);
+                        url = tryUrl;
+                        break;
+                    }
+                    catch (System.Net.Http.HttpRequestException ex)
+                    {
+                        // try next URL
+                        lastEx = ex;
+                    }
+                }
+                if (resp == null)
+                {
+                    // couldn't reach web API; fall back to saving document locally
+                    resp = null;
+                }
+
+                if (resp == null || !resp.IsSuccessStatusCode)
+                {
+                    // Fallback: save file into local uploads and persist Documents table so user can proceed offline
+                    try
+                    {
+                        using var ctx = new MicroLendDbContext();
+                        var doc = new MicroLend.DAL.Entities.Document
+                        {
+                            UserId = _userId,
+                            FileName = System.IO.Path.GetFileName(ofd.FileName),
+                            UploadedAt = DateTime.Now
+                        };
+                        ctx.Documents.Add(doc);
+                        ctx.SaveChanges();
+
+                        var dest = System.IO.Path.Combine(AppContext.BaseDirectory, "uploads");
+                        System.IO.Directory.CreateDirectory(dest);
+                        var dst = System.IO.Path.Combine(dest, doc.Id + "_" + doc.FileName);
+                        System.IO.File.Copy(ofd.FileName, dst, true);
+                        // update stored path
+                        doc.FilePath = dst;
+                        ctx.SaveChanges();
+
+                        SaveUploadedDocumentMarker(doc.Id, ofd.FileName);
+                        lblUploaded.Text = "Document saved locally (id: " + doc.Id + ")";
+                        MessageBox.Show("Server unavailable — document saved locally. It will sync when the web service is available.", "Offline Save", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        return;
+                    }
+                    catch (Exception ex)
+                    {
+                        MessageBox.Show("Error saving document locally: " + ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        return;
+                    }
                 }
 
                 var json = await resp.Content.ReadAsStringAsync();

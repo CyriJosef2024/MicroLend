@@ -86,13 +86,13 @@ namespace MicroLend.UI
             var btnOk = new Button 
             { 
                 Text = "Submit Payment", 
-                Location = new Point(250, 230), 
-                Size = new Size(100, 35),
+                Size = new Size(120, 36),
                 BackColor = Color.FromArgb(0, 120, 215),
                 ForeColor = Color.White,
-                FlatStyle = FlatStyle.Flat
+                FlatStyle = FlatStyle.Flat,
+                Anchor = AnchorStyles.Bottom | AnchorStyles.Right
             };
-            var btnCancel = new Button { Text = "Cancel", Location = new Point(355, 230), Size = new Size(80, 35) };
+            var btnCancel = new Button { Text = "Cancel", Size = new Size(100, 36), Anchor = AnchorStyles.Bottom | AnchorStyles.Right };
             
             btnOk.Click += async (s, e) => await BtnOk_ClickAsync(s, e);
             btnCancel.Click += (s, e) => DialogResult = DialogResult.Cancel;
@@ -106,8 +106,16 @@ namespace MicroLend.UI
             Controls.Add(cmbMethods);
             Controls.Add(lblRef);
             Controls.Add(txtRef);
-            Controls.Add(btnOk);
-            Controls.Add(btnCancel);
+
+            // Place buttons inside a bottom panel so they remain visible on small windows
+            var btnPanel = new Panel { Dock = DockStyle.Bottom, Height = 60, BackColor = Color.Transparent };
+            btnOk.Location = new Point(btnPanel.ClientSize.Width - btnOk.Width - 140, 12);
+            btnCancel.Location = new Point(btnPanel.ClientSize.Width - btnCancel.Width - 12, 12);
+            btnOk.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+            btnCancel.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+            btnPanel.Controls.Add(btnOk);
+            btnPanel.Controls.Add(btnCancel);
+            Controls.Add(btnPanel);
         }
         
         private async System.Threading.Tasks.Task BtnOk_ClickAsync(object? sender, EventArgs e)

@@ -1,7 +1,58 @@
 @using Microsoft.AspNetCore.Http
-<form asp-action="UploadDocument" method="post" enctype="multipart/form-data">
+<form id="uploadForm" asp-controller="Borrower" asp-action="UploadDocument" method="post" enctype="multipart/form-data">
+    @Html.AntiForgeryToken()
     <div class="mb-3">
-        <input type="file" name="file" class="form-control" />
+        <input id="fileInput" type="file" name="file" class="form-control" />
     </div>
-    <button class="btn btn-primary">Upload</button>
+    <div class="d-flex align-items-center">
+        <button id="uploadBtn" class="btn btn-primary me-2">Upload</button>
+        <div id="uploadStatus" class="text-muted"></div>
+    </div>
 </form>
+
+<script>
+    (function(){
+        const form = document.getElementById('uploadForm');
+        const btn = document.getElementById('uploadBtn');
+        const status = document.getElementById('uploadStatus');
+
+        form.addEventListener('submit', async function(e){
+            e.preventDefault();
+            status.textContent = '';
+            const input = document.getElementById('fileInput');
+            if (!input.files || input.files.length === 0) { status.textContent = 'No file selected'; return; }
+            const fd = new FormData();
+            fd.append('file', input.files[0]);
+            // include anti-forgery token
+            const tokenEl = form.querySelector('input[name="__RequestVerificationToken"]');
+            if (tokenEl) fd.append('__RequestVerificationToken', tokenEl.value);
+
+            btn.disabled = true;
+            status.textContent = 'Uploading...';
+            try {
+                const resp = await fetch(form.action, {
+                    method: 'POST',
+                    body: fd,
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                });
+                const json = await resp.json();
+                if (json && json.success) {
+                    status.textContent = 'Uploaded';
+                    // show link to uploaded file if present
+                    if (json.path) {
+                        const a = document.createElement('a'); a.href = json.path; a.textContent = ' View'; a.target = '_blank';
+                        status.appendChild(a);
+                    }
+                    // clear input
+                    input.value = '';
+                } else {
+                    status.textContent = (json && json.error) ? json.error : 'Upload failed';
+                }
+            } catch (err) {
+                status.textContent = 'Upload error';
+            } finally {
+                btn.disabled = false;
+            }
+        });
+    })();
+</script>

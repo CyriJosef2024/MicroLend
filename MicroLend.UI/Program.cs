@@ -9,7 +9,7 @@ namespace MicroLend.UI
         ///  The main entry point for the application.
         /// </summary>
     [STAThread]
-    static async Task Main()
+    static void Main()
     {
         // To customize application configuration such as set high DPI settings or default font,
         // see https://aka.ms/applicationconfiguration.
@@ -85,7 +85,9 @@ namespace MicroLend.UI
             // Apply any pending EF Core migrations so the on-disk schema matches the model.
             // This uses the migration files in the DAL project (we added one to add repayment columns).
             ctx.Database.Migrate();
-            await DataSeeder.SeedAsync(ctx);
+            // SeedAsync is asynchronous; call it synchronously here because the WinForms
+            // entry point must be STAThread and cannot be async when using OpenFileDialog/COM.
+            DataSeeder.SeedAsync(ctx).GetAwaiter().GetResult();
         }
         catch (Exception ex)
         {

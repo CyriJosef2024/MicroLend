@@ -25,14 +25,20 @@
             <div class="collapse navbar-collapse" id="mainNav">
                 <ul class="navbar-nav ms-auto">
                     <li class="nav-item"><a class="nav-link text-white" href="/">Home</a></li>
-                    <li class="nav-item"><a class="nav-link text-white" href="/Borrower/Dashboard">Borrower</a></li>
-                    <li class="nav-item"><a class="nav-link text-white" href="/Lender/Dashboard">Lender</a></li>
-                    @if (User?.IsInRole("Admin") == true)
-                    {
-                        <li class="nav-item"><a class="nav-link text-white" href="/Admin/Dashboard">Admin</a></li>
-                    }
                     @if (User?.Identity?.IsAuthenticated == true)
                     {
+                        if (User.IsInRole("Borrower"))
+                        {
+                            <li class="nav-item"><a class="nav-link text-white" href="/Borrower/Dashboard">Borrower</a></li>
+                        }
+                        if (User.IsInRole("Lender"))
+                        {
+                            <li class="nav-item"><a class="nav-link text-white" href="/Lender/Dashboard">Lender</a></li>
+                        }
+                        if (User.IsInRole("Admin"))
+                        {
+                            <li class="nav-item"><a class="nav-link text-white" href="/Admin/Dashboard">Admin</a></li>
+                        }
                         <li class="nav-item"><a class="nav-link text-white" href="/Account/Logout">Logout</a></li>
                     }
                     else

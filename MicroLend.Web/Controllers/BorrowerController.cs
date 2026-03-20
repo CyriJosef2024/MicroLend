@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace MicroLend.Web.Controllers
 {
-    [Microsoft.AspNetCore.Authorization.Authorize]
+    [Microsoft.AspNetCore.Authorization.Authorize(Roles = "Borrower")]
     public class BorrowerController : Controller
     {
         private readonly ICreditScoreService _credit;
@@ -88,8 +88,8 @@ namespace MicroLend.Web.Controllers
         }
 
         [HttpPost]
-        [HttpPost]
-        [Microsoft.AspNetCore.Authorization.Authorize]
+        [Microsoft.AspNetCore.Authorization.Authorize(Roles = "Borrower")]
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> UploadDocument(IFormFile file)
         {
             if (file == null) { TempData["Error"] = "No file selected"; return RedirectToAction("Dashboard"); }
@@ -99,8 +99,24 @@ namespace MicroLend.Web.Controllers
                 var idClaim = User.Claims.FirstOrDefault(c => c.Type == System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
                 if (int.TryParse(idClaim, out var parsed)) userId = parsed;
             }
-            // Server-side save
-            var path = await _documentSvc.SaveDocumentAsync(file, userId, null);
+            string path;
+            try
+            {
+                path = await _documentSvc.SaveDocumentAsync(file, userId, null);
+            }
+            catch (System.Exception ex)
+            {
+                var msg = "Error saving file: " + ex.Message;
+                TempData["Error"] = msg;
+                if (Request.Headers["X-Requested-With"] == "XMLHttpRequest") return Json(new { success = false, error = msg });
+                return RedirectToAction("Upload");
+            }
+
+            if (string.IsNullOrWhiteSpace(path))
+            {
+                TempData["Error"] = "Server failed to save the uploaded file.";
+                return RedirectToAction("Upload");
+            }
 
             // persist metadata in Documents table and return created id
             try
@@ -114,12 +130,18 @@ namespace MicroLend.Web.Controllers
                 {
                     return Json(new { success = true, id = doc.Id, path });
                 }
+                TempData["Success"] = "File uploaded: " + path;
             }
-            catch
+            catch (System.Exception ex)
             {
-                // ignore persistence errors here - file at least saved on disk
+                // surface error details for debugging and return JSON when AJAX
+                var msg = "Error saving document record: " + ex.Message + (ex.InnerException != null ? " - " + ex.InnerException.Message : "");
+                TempData["Error"] = msg;
+                if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
+                {
+                    return Json(new { success = false, error = msg });
+                }
             }
-            TempData["Success"] = "File uploaded.";
             return RedirectToAction("Dashboard");
         }
 

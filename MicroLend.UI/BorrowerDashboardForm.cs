@@ -12,12 +12,15 @@ namespace MicroLend.UI
     public class BorrowerDashboardForm : Form
     {
         private readonly int _userId;
+        private SplitContainer _mainSplit;
         private TabControl tabControl;
         private FlowLayoutPanel _summaryPanel;
         private System.Collections.Generic.List<Panel> _summaryCards = new System.Collections.Generic.List<Panel>();
         private DataGridView dgvMyLoans;
         private DataGridView dgvRepayments;
         private DataGridView dgvDocuments;
+        private DataGridView dgvLoanRecords;
+        private Panel _loanBottomPanel;
         private Button _btnApplyLoanGlobal;
         private Button _btnTakeQuizGlobal;
         private Button _btnMakePaymentGlobal;
@@ -61,13 +64,43 @@ namespace MicroLend.UI
             {
                 using var ctx = new MicroLendDbContext();
                 ctx.Database.Migrate();
+                // make sure Documents table exists even if migrations did not run for some reason
+                try { EnsureDocumentsTableExists(); } catch { }
                 return true;
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Database unavailable or migration failed: " + ex.Message, "Database Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                // attempt to provide helpful debugging info (DB path)
+                try
+                {
+                    var dbPath = System.IO.Path.Combine(AppContext.BaseDirectory, "MicroLend.db");
+                    MessageBox.Show("Database unavailable or migration failed: " + ex.Message + "\nDB Path: " + dbPath + (ex.InnerException != null ? "\nInner: " + ex.InnerException.Message : ""), "Database Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+                catch
+                {
+                    MessageBox.Show("Database unavailable or migration failed: " + ex.Message, "Database Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
                 return false;
             }
+        }
+
+        private void EnsureDocumentsTableExists()
+        {
+            using var ctx = new MicroLendDbContext();
+            var conn = ctx.Database.GetDbConnection();
+            conn.Open();
+            using var cmd = conn.CreateCommand();
+            // Create table if missing (columns mirror migration)
+            cmd.CommandText = @"CREATE TABLE IF NOT EXISTS Documents (
+    Id INTEGER PRIMARY KEY AUTOINCREMENT,
+    UserId INTEGER NOT NULL,
+    LoanId INTEGER,
+    FileName TEXT NOT NULL,
+    FilePath TEXT NOT NULL,
+    UploadedAt TEXT NOT NULL
+);";
+            cmd.ExecuteNonQuery();
+            try { conn.Close(); } catch { }
         }
         
         private void CreateMenuBar()
@@ -157,30 +190,7 @@ namespace MicroLend.UI
             var pSupport = AddPrimaryButton("Contact Support", Color.FromArgb(128, 128, 128), (s, e) => OpenSupport());
             Controls.Add(primaryPanel);
 
-            // Instruction panel shown when there are no loans/documents to guide user
-            var instrPanel = new Panel { Dock = DockStyle.Top, Height = 96, Padding = new Padding(12), BackColor = Color.WhiteSmoke, Name = "InstructionPanel" };
-            var instrLabel = new Label { Text = "Get started: upload your documents, then apply for a loan or take the credit quiz.", AutoSize = false, Size = new Size(600, 40), Location = new Point(12, 12), Font = new Font("Segoe UI", 10) };
-            instrPanel.Controls.Add(instrLabel);
-
-            // Action buttons for quick access
-            var btnUploadInstr = new Button { Text = "Upload Document", Size = new Size(140, 34), Location = new Point(630, 12), BackColor = Color.FromArgb(0,120,215), ForeColor = Color.White, FlatStyle = FlatStyle.Flat };
-            btnUploadInstr.Click += (s, e) => {
-                // navigate to Documents tab and open file dialog
-                foreach (TabPage tp in tabControl.TabPages) if (tp.Text == "Documents") { tabControl.SelectedTab = tp; break; }
-                BtnUploadDocument_Click(s, e);
-            };
-            var btnApplyInstr = new Button { Text = "Apply for Loan", Size = new Size(140, 34), Location = new Point(780, 12), BackColor = Color.FromArgb(0,150,136), ForeColor = Color.White, FlatStyle = FlatStyle.Flat };
-            btnApplyInstr.Click += (s, e) => { foreach (TabPage tp in tabControl.TabPages) if (tp.Text == "My Loans") { tabControl.SelectedTab = tp; break; } BtnApplyLoan_Click(s, e); };
-            var btnQuizInstr = new Button { Text = "Take Credit Quiz", Size = new Size(140, 34), Location = new Point(630, 50), BackColor = Color.FromArgb(75,181,67), ForeColor = Color.White, FlatStyle = FlatStyle.Flat };
-            btnQuizInstr.Click += (s, e) => { foreach (TabPage tp in tabControl.TabPages) if (tp.Text == "My Loans") { tabControl.SelectedTab = tp; break; } BtnTakeQuiz_Click(s, e); };
-            var btnSupport = new Button { Text = "Contact Support", Size = new Size(140, 34), Location = new Point(780, 50), BackColor = Color.FromArgb(0,102,204), ForeColor = Color.White, FlatStyle = FlatStyle.Flat };
-            btnSupport.Click += (s, e) => OpenSupport();
-
-            instrPanel.Controls.Add(btnUploadInstr);
-            instrPanel.Controls.Add(btnApplyInstr);
-            instrPanel.Controls.Add(btnQuizInstr);
-            instrPanel.Controls.Add(btnSupport);
-            Controls.Add(instrPanel);
+            // Instruction panel removed to match admin layout (no empty gray box).
 
             // Handle resize to collapse summary cards into a single column on small widths
             this.Resize += BorrowerDashboardForm_Resize;
@@ -196,19 +206,15 @@ namespace MicroLend.UI
             var tabLoans = new TabPage("My Loans");
             var loansPanel = new Panel { Dock = DockStyle.Fill };
 
-            // Ensure loan details panel exists
-            loanDetailsPanel = new Panel { Dock = DockStyle.Right, Width = 360, BackColor = Color.White, Padding = new Padding(12) };
+            // Loan details panel (shown on the right). We'll host it in a SplitContainer so
+            // the records grid can take the full available width on the left without creating
+            // an empty whitespace area on the right.
+            loanDetailsPanel = new Panel { BackColor = Color.White, Padding = new Padding(12) };
             loanDetailsPanel.Paint += (s, e) => { using var p = new Pen(Color.FromArgb(220, 220, 220)); e.Graphics.DrawRectangle(p, 0, 0, loanDetailsPanel.Width - 1, loanDetailsPanel.Height - 1); };
             var lblDetailsTitle = new Label { Text = "Loan Details", Font = new Font("Segoe UI", 12, FontStyle.Bold), Location = new Point(8, 8), AutoSize = true };
             var lblDetailsBody = new Label { Name = "DetailsBody", Location = new Point(8, 36), Size = new Size(332, 200), AutoSize = false };
-            var btnViewDocs = new Button { Text = "View Documents", Size = new Size(140, 36), Location = new Point(8, 250) };
-            btnViewDocs.Click += (s, e) => { if (dgvMyLoans.CurrentRow != null) OpenLoanDocuments(); };
-            var btnSchedule = new Button { Text = "Schedule Payment", Size = new Size(140, 36), Location = new Point(160, 250) };
-            btnSchedule.Click += (s, e) => { if (dgvMyLoans.CurrentRow != null) BtnMakePayment_Click(s, e); };
             loanDetailsPanel.Controls.Add(lblDetailsTitle);
             loanDetailsPanel.Controls.Add(lblDetailsBody);
-            loanDetailsPanel.Controls.Add(btnViewDocs);
-            loanDetailsPanel.Controls.Add(btnSchedule);
 
             var loansButtonContainer = new FlowLayoutPanel
             {
@@ -246,6 +252,43 @@ namespace MicroLend.UI
             _btnTakeQuizGlobal = btnTakeQuiz;
             loansButtonContainer.Controls.Add(btnTakeQuiz);
 
+            // Bottom area: a larger read-only grid where loan records and status are shown (similar to Admin view)
+            _loanBottomPanel = new Panel { Dock = DockStyle.Bottom, Height = 200, BackColor = Color.White, Padding = new Padding(2), Margin = new Padding(0) };
+            dgvLoanRecords = new DataGridView
+            {
+                Dock = DockStyle.Fill,
+                ReadOnly = true,
+                AutoGenerateColumns = false,
+                AllowUserToAddRows = false,
+                SelectionMode = DataGridViewSelectionMode.FullRowSelect,
+                AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill,
+                Margin = new Padding(0),
+                RowTemplate = { Height = 28 }
+            };
+            // columns: Purpose, TargetAmount, CurrentAmount, InterestRate, Status, IsCrowdfunded, DateGranted
+            dgvLoanRecords.ColumnHeadersDefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleLeft;
+            dgvLoanRecords.DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleLeft;
+            dgvLoanRecords.RowHeadersVisible = false;
+            dgvLoanRecords.AllowUserToResizeRows = false;
+            var colPurpose = new DataGridViewTextBoxColumn { Name = "Purpose", HeaderText = "Purpose", DataPropertyName = "Purpose" };
+            var colTarget = new DataGridViewTextBoxColumn { Name = "TargetAmount", HeaderText = "Target", DataPropertyName = "TargetAmount", DefaultCellStyle = { Format = "N2" } };
+            var colCurrent = new DataGridViewTextBoxColumn { Name = "CurrentAmount", HeaderText = "Current", DataPropertyName = "CurrentAmount", DefaultCellStyle = { Format = "N2" } };
+            var colInterest = new DataGridViewTextBoxColumn { Name = "InterestRate", HeaderText = "InterestRate", DataPropertyName = "InterestRate", DefaultCellStyle = { Format = "N2" } };
+            var colStatus = new DataGridViewTextBoxColumn { Name = "Status", HeaderText = "Status", DataPropertyName = "Status" };
+            var colCrowd = new DataGridViewCheckBoxColumn { Name = "IsCrowdfunded", HeaderText = "IsCrowdfunded", DataPropertyName = "IsCrowdfunded" };
+            var colDate = new DataGridViewTextBoxColumn { Name = "DateGranted", HeaderText = "DateGranted", DataPropertyName = "DateGranted", DefaultCellStyle = { Format = "g" } };
+            // Balance fill weights for nicer layout
+            colPurpose.FillWeight = 220;
+            colTarget.FillWeight = 80;
+            colCurrent.FillWeight = 80;
+            colInterest.FillWeight = 70;
+            colStatus.FillWeight = 80;
+            colCrowd.FillWeight = 50;
+            colDate.FillWeight = 100;
+            dgvLoanRecords.Columns.AddRange(new DataGridViewColumn[] { colPurpose, colTarget, colCurrent, colInterest, colStatus, colCrowd, colDate });
+            dgvLoanRecords.Margin = new Padding(0);
+            _loanBottomPanel.Controls.Add(dgvLoanRecords);
+
             dgvMyLoans = new DataGridView
             {
                 Dock = DockStyle.Fill,
@@ -254,22 +297,46 @@ namespace MicroLend.UI
                 AllowUserToAddRows = false,
                 SelectionMode = DataGridViewSelectionMode.FullRowSelect,
                 AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill,
-                Margin = new Padding(10)
+                Margin = new Padding(6),
+                RowTemplate = { Height = 28 }
             };
             // Define explicit columns so headers are stable regardless of returned projection
             dgvMyLoans.Columns.Clear();
-            dgvMyLoans.Columns.Add(new DataGridViewTextBoxColumn { Name = "Id", HeaderText = "Loan ID", DataPropertyName = "Id", Width = 80 });
-            dgvMyLoans.Columns.Add(new DataGridViewTextBoxColumn { Name = "Purpose", HeaderText = "Purpose", DataPropertyName = "Purpose" });
-            dgvMyLoans.Columns.Add(new DataGridViewTextBoxColumn { Name = "TargetAmount", HeaderText = "Amount (₱)", DataPropertyName = "TargetAmount", DefaultCellStyle = { Format = "N2" } });
-            dgvMyLoans.Columns.Add(new DataGridViewTextBoxColumn { Name = "CurrentAmount", HeaderText = "Funded (₱)", DataPropertyName = "CurrentAmount", DefaultCellStyle = { Format = "N2" } });
-            dgvMyLoans.Columns.Add(new DataGridViewTextBoxColumn { Name = "Status", HeaderText = "Status", DataPropertyName = "Status" });
-            dgvMyLoans.Columns.Add(new DataGridViewTextBoxColumn { Name = "RiskScore", HeaderText = "Risk Score", DataPropertyName = "RiskScore" });
-            dgvMyLoans.Columns.Add(new DataGridViewTextBoxColumn { Name = "InterestRate", HeaderText = "Interest Rate (%)", DataPropertyName = "InterestRate", DefaultCellStyle = { Format = "N2" } });
+            var cId = new DataGridViewTextBoxColumn { Name = "Id", HeaderText = "Loan ID", DataPropertyName = "Id", Width = 80 };
+            var cPurpose = new DataGridViewTextBoxColumn { Name = "Purpose", HeaderText = "Purpose", DataPropertyName = "Purpose" };
+            var cTarget = new DataGridViewTextBoxColumn { Name = "TargetAmount", HeaderText = "Amount (₱)", DataPropertyName = "TargetAmount", DefaultCellStyle = { Format = "N2" } };
+            var cCurrent = new DataGridViewTextBoxColumn { Name = "CurrentAmount", HeaderText = "Funded (₱)", DataPropertyName = "CurrentAmount", DefaultCellStyle = { Format = "N2" } };
+            var cStatus = new DataGridViewTextBoxColumn { Name = "Status", HeaderText = "Status", DataPropertyName = "Status" };
+            var cRisk = new DataGridViewTextBoxColumn { Name = "RiskScore", HeaderText = "Risk Score", DataPropertyName = "RiskScore" };
+            var cInterest = new DataGridViewTextBoxColumn { Name = "InterestRate", HeaderText = "Interest Rate (%)", DataPropertyName = "InterestRate", DefaultCellStyle = { Format = "N2" } };
+            cPurpose.FillWeight = 220;
+            cTarget.FillWeight = 90;
+            cCurrent.FillWeight = 90;
+            cStatus.FillWeight = 80;
+            cRisk.FillWeight = 70;
+            cInterest.FillWeight = 70;
+            dgvMyLoans.Columns.AddRange(new DataGridViewColumn[] { cId, cPurpose, cTarget, cCurrent, cStatus, cRisk, cInterest });
 
-            // Add controls in docking order: top toolbar, right details, then fill grid
-            loansPanel.Controls.Add(loansButtonContainer);
-            loansPanel.Controls.Add(loanDetailsPanel);
-            loansPanel.Controls.Add(dgvMyLoans);
+            // Compose the loans area using a SplitContainer so left side holds the main grids
+            // and right side holds the loan details. This avoids layout whitespace issues.
+            var mainSplit = new SplitContainer { Dock = DockStyle.Fill, Orientation = Orientation.Vertical };
+            mainSplit.SplitterDistance = Math.Max(400, this.ClientSize.Width - 360);
+            mainSplit.Panel1.Padding = new Padding(0);
+            mainSplit.Panel2.Padding = new Padding(0);
+
+            // Left panel: toolbar at top, loans grid fill, bottom loan records docked bottom
+            mainSplit.Panel1.Controls.Add(dgvMyLoans);
+            mainSplit.Panel1.Controls.Add(_loanBottomPanel);
+            mainSplit.Panel1.Controls.Add(loansButtonContainer);
+            loansButtonContainer.Dock = DockStyle.Top;
+            _loanBottomPanel.Dock = DockStyle.Bottom;
+            dgvMyLoans.Dock = DockStyle.Fill;
+
+            // Right panel: loan details
+            loanDetailsPanel.Dock = DockStyle.Fill;
+            mainSplit.Panel2.Controls.Add(loanDetailsPanel);
+
+            loansPanel.Controls.Add(mainSplit);
             tabLoans.Controls.Add(loansPanel);
             tabControl.TabPages.Add(tabLoans);
             
@@ -558,6 +625,24 @@ namespace MicroLend.UI
                 if (instr != null) instr.Visible = ! (loans.Any() || (dgvDocuments.DataSource != null && ((System.Collections.IList)dgvDocuments.DataSource).Count > 0));
                 var primaryPanel = FindControlByName(this, "PrimaryActions");
                 if (primaryPanel != null) primaryPanel.Visible = true;
+                // populate bottom loan records grid
+                try
+                {
+                    var loanRecords = await Task.Run(() => ctx.Loans
+                        .Where(l => l.BorrowerId == borrower.Id)
+                        .Select(l => new
+                        {
+                            l.Purpose,
+                            l.TargetAmount,
+                            l.CurrentAmount,
+                            l.InterestRate,
+                            l.Status,
+                            l.IsCrowdfunded,
+                            l.DateGranted
+                        }).ToList());
+                    dgvLoanRecords.DataSource = loanRecords;
+                }
+                catch { }
             }
             catch (Exception ex)
             {
@@ -651,31 +736,41 @@ namespace MicroLend.UI
             if (!EnsureDatabaseMigrated()) return;
             using var ofd = new OpenFileDialog { Filter = "PDF or Image|*.pdf;*.jpg;*.jpeg;*.png|All files|*.*" };
             if (ofd.ShowDialog() != DialogResult.OK) return;
-
             try
             {
+                // Copy file to local uploads first so we can persist the path atomically.
+                var dest = System.IO.Path.Combine(AppContext.BaseDirectory, "uploads");
+                System.IO.Directory.CreateDirectory(dest);
+                var fileName = System.IO.Path.GetFileName(ofd.FileName);
+                var dst = System.IO.Path.Combine(dest, Guid.NewGuid().ToString() + "_" + fileName);
+                System.IO.File.Copy(ofd.FileName, dst, true);
+
                 using var ctx = new MicroLendDbContext();
                 var doc = new Document
                 {
                     UserId = _userId,
-                    FileName = System.IO.Path.GetFileName(ofd.FileName),
+                    FileName = fileName,
+                    FilePath = dst,
                     UploadedAt = DateTime.Now
                 };
                 ctx.Documents.Add(doc);
                 ctx.SaveChanges();
-
-                // Save file marker locally for demo purposes
-                var dest = System.IO.Path.Combine(AppContext.BaseDirectory, "uploads");
-                System.IO.Directory.CreateDirectory(dest);
-                var dst = System.IO.Path.Combine(dest, doc.Id + "_" + doc.FileName);
-                System.IO.File.Copy(ofd.FileName, dst, true);
 
                 LoadDocuments();
                 MessageBox.Show("Document uploaded successfully.");
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Error uploading document: " + ex.Message);
+                try
+                {
+                    var dbPath = System.IO.Path.Combine(AppContext.BaseDirectory, "MicroLend.db");
+                    var inner = ex.InnerException != null ? "\nInner: " + ex.InnerException.Message : string.Empty;
+                    MessageBox.Show($"Error uploading document: {ex.Message}{inner}\nDB Path: {dbPath}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+                catch
+                {
+                    MessageBox.Show("Error uploading document: " + ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
             }
         }
 
@@ -689,6 +784,8 @@ namespace MicroLend.UI
                     .Select(d => new { d.Id, d.FileName, UploadedAt = d.UploadedAt })
                     .ToList();
                 dgvDocuments.DataSource = docs;
+                // If loan records control exists ensure it refreshes (in case documents affect UI state)
+                try { if (dgvLoanRecords != null) dgvLoanRecords.Refresh(); } catch { }
                 // hide instruction panel if docs exist or loans exist
                 var instr = FindControlByName(this, "InstructionPanel");
                 if (instr != null) instr.Visible = !(docs.Any() || (dgvMyLoans.DataSource != null && ((System.Collections.IList)dgvMyLoans.DataSource).Count > 0));

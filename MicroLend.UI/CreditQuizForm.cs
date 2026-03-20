@@ -30,9 +30,30 @@ namespace MicroLend.UI
             StartPosition = FormStartPosition.CenterParent;
 
             panel = new FlowLayoutPanel { Dock = DockStyle.Fill, AutoScroll = true, FlowDirection = FlowDirection.TopDown };
-            Controls.Add(panel);
 
             var questions = _service.GetQuestions();
+            // Add a few more relevant questions to improve scoring breadth
+            questions.AddRange(new[] {
+                new MicroLend.BLL.Services.QuizQuestion {
+                    Id = 3,
+                    Text = "How stable is your monthly income?",
+                    Options = new System.Collections.Generic.List<MicroLend.BLL.Services.QuizOption> {
+                        new MicroLend.BLL.Services.QuizOption { Id = 301, Text = "Very stable", Points = 20 },
+                        new MicroLend.BLL.Services.QuizOption { Id = 302, Text = "Somewhat stable", Points = 10 },
+                        new MicroLend.BLL.Services.QuizOption { Id = 303, Text = "Unstable", Points = -10 }
+                    }
+                },
+                new MicroLend.BLL.Services.QuizQuestion {
+                    Id = 4,
+                    Text = "Do you have any existing loans?",
+                    Options = new System.Collections.Generic.List<MicroLend.BLL.Services.QuizOption> {
+                        new MicroLend.BLL.Services.QuizOption { Id = 401, Text = "No", Points = 20 },
+                        new MicroLend.BLL.Services.QuizOption { Id = 402, Text = "Yes, one", Points = 0 },
+                        new MicroLend.BLL.Services.QuizOption { Id = 403, Text = "Multiple", Points = -20 }
+                    }
+                }
+            });
+
             foreach (var q in questions)
             {
                 var p = new Panel { Width = 560, Height = 100, BorderStyle = BorderStyle.None };
@@ -46,9 +67,17 @@ namespace MicroLend.UI
                 answerBoxes.Add(cb);
             }
 
-            btnSubmit = new Button { Text = "Submit Quiz", Location = new Point(420, 420), Size = new Size(120, 36) };
+            // Place submit button in a bottom docked panel so it's always visible
+            var bottom = new Panel { Dock = DockStyle.Bottom, Height = 60 };
+            btnSubmit = new Button { Text = "Submit Quiz", Size = new Size(120, 36) };
             btnSubmit.Click += async (s, e) => await OnSubmit();
-            Controls.Add(btnSubmit);
+            var fl = new FlowLayoutPanel { Dock = DockStyle.Fill, FlowDirection = FlowDirection.RightToLeft, Padding = new Padding(10) };
+            fl.Controls.Add(btnSubmit);
+            bottom.Controls.Add(fl);
+
+            // Add controls so the main panel fills remaining area above the bottom panel
+            Controls.Add(panel);
+            Controls.Add(bottom);
         }
 
         private async Task OnSubmit()
