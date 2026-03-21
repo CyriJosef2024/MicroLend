@@ -8,15 +8,13 @@ A comprehensive system to manage small, interest-free loans within a community (
 ---
 
 ## System Architecture
-
 ### Project Structure
 
 ```
-MicroLend.slnx
+MicroLend.sln
 ├── MicroLend.DAL/          # Data Access Layer
 ├── MicroLend.BLL/          # Business Logic Layer
-├── MicroLend.UI/           # Windows Forms Desktop Application
-└── MicroLend.Web/          # ASP.NET Core Web Application
+└── MicroLend.UI/           # Windows Forms Desktop Application
 ```
 
 ---
@@ -117,19 +115,6 @@ Windows Forms desktop application providing a graphical interface.
 
 ---
 
-### 4. Web Application (Web)
-**Location:** `MicroLend.Web/`
-
-ASP.NET Core MVC web application providing browser-based access.
-
-**Features:**
-- RESTful API controllers
-- Razor views for each user role
-- Session management
-- Responsive design
-
----
-
 ## System Functionality
 
 ### Core Features
@@ -194,20 +179,30 @@ The system comes pre-seeded with test accounts. Use the following credentials:
 | **Role** | Admin |
 
 #### 👤 Borrower Accounts
-| Username | Password | Full Name | Monthly Income |
-|----------|----------|-----------|----------------|
-| `alice` | `pass1` | Alice Smith | ₱12,000 |
-| `bob` | `pass2` | Bob Johnson | ₱15,000 |
-| `charlie` | `pass3` | Charlie Park | ₱9,000 |
+| Username | Password | Full Name | Monthly Income | Business |
+|----------|----------|-----------|----------------|----------|
+| `alice` | `pass1` | Alice Smith | ₱12,000 | Retail |
+| `bob` | `pass2` | Bob Johnson | ₱15,000 | Food |
+| `charlie` | `pass3` | Charlie Park | ₱9,000 | Services |
+| `diana` | `pass4` | Diana Perez | ₱18,000 | Tech |
+| `edward` | `pass5` | Edward Lee | ₱11,000 | Retail |
+| `fiona` | `pass6` | Fiona Garcia | ₱14,000 | Food |
+| `george` | `pass7` | George Wilson | ₱10,000 | Services |
+| `hannah` | `pass8` | Hannah Brown | ₱16,000 | Tech |
 
 #### 💰 Lender Accounts
-| Username | Password |
-|----------|----------|
-| `lender_alex` | `lendpass1` |
-| `lender_maya` | `lendpass2` |
-| `lender_john` | `lendpass3` |
+| Username | Password | Full Name | Initial Balance |
+|----------|----------|-----------|----------------|
+| `lender_alex` | `lendpass1` | Alex Thompson | ₱100,000 |
+| `lender_maya` | `lendpass2` | Maya Santos | ₱150,000 |
+| `lender_john` | `lendpass3` | John Davis | ₱200,000 |
+| `lender_rose` | `lendpass4` | Rose Miller | ₱80,000 |
+| `lender_steve` | `lendpass5` | Steve Clark | ₱120,000 |
+| `lender_lisa` | `lendpass6` | Lisa Anderson | ₱90,000 |
+| `lender_mike` | `lendpass7` | Mike Robinson | ₱75,000 |
+| `lender_amy` | `lendpass8` | Amy White | ₱110,000 |
 
-> **Note:** New users can sign up through the application. Only Borrower and Lender roles are available for self-registration. Admin accounts must be created directly in the database.
+> **Note:** New users can sign up through the application. Only Borrower and Lender roles are available for self-registration. Admin accounts must be created directly in the database. Lenders receive an initial balance to start investing in loans.
 
 ---
 
@@ -227,17 +222,6 @@ The system comes pre-seeded with test accounts. Use the following credentials:
 4. Click **Login** to access your dashboard
 
 5. New users can click **Sign Up** to create an account
-
-### Web Application
-
-1. Run the web application:
-   ```
-   dotnet run --project MicroLend.Web
-   ```
-
-2. Navigate to `http://localhost:5000`
-
-3. Login with your credentials
 
 ---
 
@@ -291,22 +275,19 @@ This project uses Entity Framework Core migrations stored in `MicroLend.DAL/Migr
    dotnet ef migrations add YourMigrationName
    ```
 
-2. Apply migrations to the database (the Web app is used as the startup project here):
+2. Apply migrations to the database (the UI app is used as the startup project here):
 
    ```powershell
-   dotnet ef database update -p MicroLend.DAL -s MicroLend.Web
+   dotnet ef database update -p MicroLend.DAL -s MicroLend.UI
    ```
 
 3. The WinForms `Program.Main` also calls `Database.Migrate()` on startup for convenience during development; however, for production it's recommended to run migrations explicitly and verify schema changes.
 
 ## Deployment notes
 
-- Start the web server first to enable authenticated upload and API calls used by the desktop client:
-  - `dotnet run --project MicroLend.Web`
-  - Ensure it listens on `http://localhost:5000` as configured in `Program.cs`.
-- When using the desktop client, create a local API token file before calling upload (development convenience):
-  - Create `apitoken.txt` in the application directory containing a valid bearer token.
-  - This demo stores tokens locally; in production use a proper secure token store and authentication flow.
+- The Windows Forms desktop application runs standalone - no web server required.
+- The application uses SQLite database which is created automatically on first run.
+- Sample data (users, loans, repayments) is seeded automatically on first launch.
 
 ## Payment provider
 
@@ -331,7 +312,6 @@ dotnet build MicroLend.slnx
 dotnet build MicroLend.DAL/MicroLend.DAL.csproj
 dotnet build MicroLend.BLL/MicroLend.BLL.csproj
 dotnet build MicroLend.UI/MicroLend.UI.csproj
-dotnet build MicroLend.Web/MicroLend.Web.csproj
 ```
 
 ---
@@ -357,17 +337,14 @@ dotnet build MicroLend.Web/MicroLend.Web.csproj
 ## Technology stack
 
 - Languages: C# (targeting .NET 10, C# 14)
-- Web: ASP.NET Core MVC with Razor views and Bootstrap 5 for responsive UI
 - Data access: Entity Framework Core 10 (SQLite provider)
 - Desktop: Windows Forms (.NET WinForms)
-- Client-side: jQuery (validation) and optional AJAX for uploads
 
-## Document upload & verification (what we changed and how it works)
+## Document upload & verification
 
-- Upload storage: uploaded files are saved to `wwwroot/uploads` by the web implementation `MicroLend.Web/Services/WebDocumentService.cs`.
 - Database: metadata is stored in the `Documents` table via `MicroLend.DAL.Entities.Document` (fields: `Id`, `UserId`, `LoanId`, `FileName`, `FilePath`, `UploadedAt`, `Status`, `ReviewedBy`, `ReviewedAt`).
 - Default status: when a borrower uploads a document its `Status` is `Pending`.
-- Admin review: an admin can view `/Admin/UploadedDocuments` and click Approve/Reject. That calls `AdminController.VerifyDocument` which updates `Status`, `ReviewedBy`, and `ReviewedAt`.
+- Admin review: an admin can view uploaded documents and click Approve/Reject to update `Status`, `ReviewedBy`, and `ReviewedAt`.
 
 ## DAL / BLL responsibilities (brief)
 
@@ -388,19 +365,14 @@ dotnet build MicroLend.Web/MicroLend.Web.csproj
 ## How to verify an upload succeeded (quick checklist)
 
 1. Upload the file from a Borrower account.
-2. Check the web response in the browser DevTools Network tab. A successful form POST will either return JSON (if AJAX) or redirect to a page with a success TempData message.
-3. Confirm the file exists under `MicroLend.Web/wwwroot/uploads`.
-4. Inspect the `Documents` table in the SQLite DB (file path printed by `MicroLendDbContext` configuration). Look for a row with `UserId`, `FilePath` and `UploadedAt`.
-5. Admin: visit `/Admin/UploadedDocuments` to view the pending file and use Approve/Reject. Approval sets `Status = "Approved"` and updates `ReviewedBy`/`ReviewedAt`.
+2. Confirm the upload was successful (UI will show success message).
+3. Inspect the `Documents` table in the SQLite DB. Look for a row with `UserId`, `FilePath` and `UploadedAt`.
+4. Admin: view pending files in the Admin Dashboard and use Approve/Reject. Approval sets `Status = "Approved"` and updates `ReviewedBy`/`ReviewedAt`.
 
 ## Next steps I applied in code (DAL / BLL)
 
 - Added `Status`, `ReviewedBy`, and `ReviewedAt` to `Document` entity and migration so Admin can approve/reject uploaded documents.
-- Ensured the upload partial emits an antiforgery token and the controller action honors it.
-- Controller persists a `Document` row after the file is written to disk.
-- Admin controller exposes `UploadedDocuments` view and `VerifyDocument` action for approving/rejecting documents.
-
-If you still see the page refresh without records after following the checklist, capture the browser Network request and the server exception text (if any) and paste them here. I will inspect the failing request and pinpoint the DAL or BLL problem.
+- Windows Forms UI handles document upload and admin review functionality.
 
 
 Adding Additional Co-Authors for testing. 

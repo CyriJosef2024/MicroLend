@@ -28,13 +28,14 @@ namespace MicroLend.UI
         private Label lblTotalInvested;
         private Label lblTotalReturns;
         private Label lblActiveLoans;
+        private Label lblBalance;
         
         public LenderDashboardForm(int userId)
         {
             _userId = userId;
             Text = "Lender Dashboard - MicroLend";
-            Width = 1000;
-            Height = 700;
+            Width = 1200;
+            Height = 800;
             StartPosition = FormStartPosition.CenterParent;
             BackColor = Color.FromArgb(240, 248, 255);
             
@@ -107,12 +108,17 @@ namespace MicroLend.UI
             {
                 FlowDirection = FlowDirection.LeftToRight,
                 Location = new Point(10, 40),
-                Size = new Size(970, 100),
+                Size = new Size(1160, 100),
                 AutoSize = true
             };
             
             // Total Invested Card
             var fintechGreen = Color.FromArgb(0, 133, 119); // #008577 approximate
+            var card0 = CreateSummaryCard("Available Balance", "₱0.00", Color.FromArgb(0, 123, 255));
+            lblBalance = card0.Controls[1] as Label;
+            summaryPanel.Controls.Add(card0);
+            
+            // Total Invested Card
             var card1 = CreateSummaryCard("Total Invested", "₱0.00", fintechGreen);
             lblTotalInvested = card1.Controls[1] as Label;
             summaryPanel.Controls.Add(card1);
@@ -133,7 +139,7 @@ namespace MicroLend.UI
             tabControl = new TabControl
             {
                 Location = new Point(10, 150),
-                Size = new Size(970, 500)
+                Size = new Size(1160, 600)
             };
             
             // My Investments Tab
@@ -174,25 +180,57 @@ namespace MicroLend.UI
             };
             btnFund.Click += BtnFund_Click;
             browsePanel.Controls.Add(btnFund);
-            // Filter controls
-            txtPurposeFilter = new TextBox { Location = new Point(10, 10), Width = 240, PlaceholderText = "Purpose contains..." };
-            cbRiskFilter = new ComboBox { Location = new Point(260, 10), Width = 140, DropDownStyle = ComboBoxStyle.DropDownList };
+            
+            // Add Funds Button
+            var btnAddFunds = new Button
+            {
+                Text = "Add Funds",
+                Location = new Point(620, 5),
+                Size = new Size(140, 30),
+                BackColor = Color.FromArgb(0, 123, 255),
+                ForeColor = Color.White,
+                FlatStyle = FlatStyle.Flat
+            };
+            btnAddFunds.Click += (s, e) => ShowAddFundsDialog();
+            browsePanel.Controls.Add(btnAddFunds);
+            
+            // Filter controls - placed in a panel for better layout
+            var filterPanel = new Panel { Location = new Point(10, 45), Size = new Size(1120, 35), BackColor = Color.FromArgb(245, 245, 245) };
+            
+            var lblPurpose = new Label { Text = "Purpose:", Location = new Point(5, 8), AutoSize = true };
+            filterPanel.Controls.Add(lblPurpose);
+            
+            txtPurposeFilter = new TextBox { Location = new Point(65, 5), Width = 180, PlaceholderText = "Search purpose..." };
+            filterPanel.Controls.Add(txtPurposeFilter);
+            
+            var lblRisk = new Label { Text = "Risk:", Location = new Point(255, 8), AutoSize = true };
+            filterPanel.Controls.Add(lblRisk);
+            
+            cbRiskFilter = new ComboBox { Location = new Point(300, 5), Width = 100, DropDownStyle = ComboBoxStyle.DropDownList };
             cbRiskFilter.Items.AddRange(new object[] { "Any", "Low", "Medium", "High" });
             cbRiskFilter.SelectedIndex = 0;
-            nudMaxRemainingFilter = new NumericUpDown { Location = new Point(410, 10), Width = 120, Minimum = 0, Maximum = 10000000, DecimalPlaces = 2, Value = 0 };
-            var lblRemaining = new Label { Text = "Max Remaining (₱)", Location = new Point(410, -6), AutoSize = true };
-            btnApplyFilter = new Button { Text = "Apply Filter", Location = new Point(540, 8), Size = new Size(100, 28), BackColor = fintechGreen, ForeColor = Color.White, FlatStyle = FlatStyle.Flat };
-            btnClearFilter = new Button { Text = "Clear", Location = new Point(648, 8), Size = new Size(60, 28) };
-            btnViewDetails = new Button { Text = "View Details", Location = new Point(718, 8), Size = new Size(100, 28) };
-            btnSignAgreement = new Button { Text = "Sign Agreement", Location = new Point(826, 8), Size = new Size(120, 28), BackColor = fintechGreen, ForeColor = Color.White, FlatStyle = FlatStyle.Flat };
-            browsePanel.Controls.Add(txtPurposeFilter);
-            browsePanel.Controls.Add(cbRiskFilter);
-            browsePanel.Controls.Add(lblRemaining);
-            browsePanel.Controls.Add(nudMaxRemainingFilter);
-            browsePanel.Controls.Add(btnApplyFilter);
-            browsePanel.Controls.Add(btnClearFilter);
-            browsePanel.Controls.Add(btnViewDetails);
-            browsePanel.Controls.Add(btnSignAgreement);
+            filterPanel.Controls.Add(cbRiskFilter);
+            
+            var lblRemaining = new Label { Text = "Max Remaining (₱):", Location = new Point(410, 8), AutoSize = true };
+            filterPanel.Controls.Add(lblRemaining);
+            
+            nudMaxRemainingFilter = new NumericUpDown { Location = new Point(520, 5), Width = 120, Minimum = 0, Maximum = 10000000, DecimalPlaces = 2, Value = 0 };
+            filterPanel.Controls.Add(nudMaxRemainingFilter);
+            
+            btnApplyFilter = new Button { Text = "Apply Filter", Location = new Point(650, 3), Size = new Size(100, 28), BackColor = fintechGreen, ForeColor = Color.White, FlatStyle = FlatStyle.Flat };
+            filterPanel.Controls.Add(btnApplyFilter);
+            
+            btnClearFilter = new Button { Text = "Clear", Location = new Point(760, 3), Size = new Size(70, 28) };
+            filterPanel.Controls.Add(btnClearFilter);
+            
+            btnViewDetails = new Button { Text = "View Details", Location = new Point(840, 3), Size = new Size(100, 28) };
+            filterPanel.Controls.Add(btnViewDetails);
+            
+            btnSignAgreement = new Button { Text = "Sign Agreement", Location = new Point(950, 3), Size = new Size(130, 28), BackColor = fintechGreen, ForeColor = Color.White, FlatStyle = FlatStyle.Flat };
+            filterPanel.Controls.Add(btnSignAgreement);
+            
+            browsePanel.Controls.Add(filterPanel);
+            
             btnApplyFilter.Click += (s, e) => _ = LoadAvailableLoansAsync();
             btnClearFilter.Click += (s, e) => { txtPurposeFilter.Text = ""; cbRiskFilter.SelectedIndex = 0; nudMaxRemainingFilter.Value = 0; _ = LoadAvailableLoansAsync(); };
             btnViewDetails.Click += (s, e) => { BtnFund_Click(s, e); };
@@ -200,12 +238,15 @@ namespace MicroLend.UI
             
             dgvAvailableLoans = new DataGridView
             {
-                Location = new Point(10, 45),
-                Size = new Size(920, 380),
+                Location = new Point(10, 90),
+                Size = new Size(1120, 470),
                 ReadOnly = true,
                 AutoGenerateColumns = true,
                 AllowUserToAddRows = false,
-                SelectionMode = DataGridViewSelectionMode.FullRowSelect
+                SelectionMode = DataGridViewSelectionMode.FullRowSelect,
+                BackgroundColor = Color.White,
+                BorderStyle = BorderStyle.FixedSingle,
+                ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.AutoSize
             };
             browsePanel.Controls.Add(dgvAvailableLoans);
             tabBrowse.Controls.Add(browsePanel);
@@ -358,34 +399,74 @@ namespace MicroLend.UI
                     q = q.Where(l => (l.TargetAmount - l.CurrentAmount) <= maxRem);
                 }
 
-                var loans = await Task.Run(() => q.Select(l => new
-                {
-                    l.Id,
-                    l.Purpose,
-                    TargetAmount = l.TargetAmount,
-                    CurrentAmount = l.CurrentAmount,
-                    Remaining = l.TargetAmount - l.CurrentAmount,
-                    l.Status,
-                    l.RiskScore
-                }).ToList());
+                // Get loans with borrower info
+                var loans = await Task.Run(() => q.ToList());
                 
-                dgvAvailableLoans.DataSource = loans;
+                // Get borrower info and credit scores
+                var borrowerIds = loans.Select(l => l.BorrowerId).Distinct().ToList();
+                var borrowers = ctx.Borrowers.Where(b => borrowerIds.Contains(b.Id)).ToList();
+                var userIds = borrowers.Select(b => b.UserId).ToList();
+                var users = ctx.Users.Where(u => userIds.Contains(u.Id)).ToList();
+                var creditScores = ctx.CreditScores.Where(c => userIds.Contains(c.UserId)).ToList();
+                
+                // Build the result with borrower info
+                var result = loans.Select(l => {
+                    var borrower = borrowers.FirstOrDefault(b => b.Id == l.BorrowerId);
+                    var user = borrower != null ? users.FirstOrDefault(u => u.Id == borrower.UserId) : null;
+                    var creditScore = user != null ? creditScores.FirstOrDefault(c => c.UserId == user.Id) : null;
+                    
+                    return new
+                    {
+                        l.Id,
+                        BorrowerName = user?.Username ?? "Unknown",
+                        l.Purpose,
+                        TargetAmount = l.TargetAmount,
+                        CurrentAmount = l.CurrentAmount,
+                        Remaining = l.TargetAmount - l.CurrentAmount,
+                        l.Status,
+                        l.RiskScore,
+                        CreditScore = creditScore?.Score ?? 0,
+                        CreditScoreLevel = GetCreditScoreLevel(creditScore?.Score ?? 0)
+                    };
+                }).ToList();
+                
+                dgvAvailableLoans.DataSource = result;
                 
                 if (dgvAvailableLoans.Columns.Count > 0)
                 {
                     dgvAvailableLoans.Columns["Id"].HeaderText = "Loan ID";
+                    dgvAvailableLoans.Columns["BorrowerName"].HeaderText = "Borrower";
                     dgvAvailableLoans.Columns["Purpose"].HeaderText = "Purpose";
                     dgvAvailableLoans.Columns["TargetAmount"].HeaderText = "Target (₱)";
                     dgvAvailableLoans.Columns["CurrentAmount"].HeaderText = "Funded (₱)";
                     dgvAvailableLoans.Columns["Remaining"].HeaderText = "Remaining (₱)";
                     dgvAvailableLoans.Columns["Status"].HeaderText = "Status";
                     dgvAvailableLoans.Columns["RiskScore"].HeaderText = "Risk Score";
+                    dgvAvailableLoans.Columns["CreditScore"].HeaderText = "Credit Score";
+                    dgvAvailableLoans.Columns["CreditScoreLevel"].HeaderText = "Credit Level";
+                    
+                    // Set column widths
+                    dgvAvailableLoans.Columns["Id"].Width = 60;
+                    dgvAvailableLoans.Columns["BorrowerName"].Width = 100;
+                    dgvAvailableLoans.Columns["Purpose"].Width = 150;
+                    dgvAvailableLoans.Columns["RiskScore"].Width = 80;
+                    dgvAvailableLoans.Columns["CreditScore"].Width = 90;
+                    dgvAvailableLoans.Columns["CreditScoreLevel"].Width = 90;
                 }
             }
             catch (Exception ex)
             {
                 MessageBox.Show("Error loading available loans: " + ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
+        }
+        
+        private string GetCreditScoreLevel(int score)
+        {
+            if (score >= 80) return "Excellent";
+            if (score >= 60) return "Good";
+            if (score >= 40) return "Fair";
+            if (score >= 20) return "Poor";
+            return "Very Poor";
         }
         
         private async Task LoadFundedLoansAsync()
@@ -433,6 +514,10 @@ namespace MicroLend.UI
             {
                 var ctx = new MicroLendDbContext();
                 
+                // Get user's balance
+                var user = ctx.Users.Find(_userId);
+                var balance = user?.Balance ?? 0;
+                
                 var totalInvested = ctx.LoanFunders
                     .Where(f => f.LenderId == _userId)
                     .Sum(f => (decimal?)f.Amount) ?? 0;
@@ -447,6 +532,7 @@ namespace MicroLend.UI
                     .Distinct()
                     .Count();
                 
+                lblBalance.Text = $"₱{balance:N2}";
                 lblTotalInvested.Text = $"₱{totalInvested:N2}";
                 lblTotalReturns.Text = $"₱{totalReturns:N2}";
                 lblActiveLoans.Text = activeLoans.ToString();
@@ -481,6 +567,51 @@ namespace MicroLend.UI
         {
             using var settingsForm = new AccountSettingsForm(_userId);
             settingsForm.ShowDialog();
+        }
+        
+        private void ShowAddFundsDialog()
+        {
+            using var dlg = new Form { Text = "Add Funds", Width = 400, Height = 200, StartPosition = FormStartPosition.CenterParent };
+            var lblTitle = new Label { Text = "Add Funds to Your Account", Font = new Font("Segoe UI", 12, FontStyle.Bold), Location = new Point(20, 20), AutoSize = true };
+            var lblAmount = new Label { Text = "Amount (₱):", Location = new Point(20, 60), AutoSize = true };
+            var txtAmount = new TextBox { Location = new Point(20, 85), Width = 340 };
+            var btnAdd = new Button { Text = "Add Funds", Location = new Point(200, 130), Size = new Size(80, 30), BackColor = Color.FromArgb(0, 123, 255), ForeColor = Color.White, FlatStyle = FlatStyle.Flat };
+            var btnCancel = new Button { Text = "Cancel", Location = new Point(290, 130), Size = new Size(70, 30) };
+            
+            btnAdd.Click += (s, e) => {
+                if (!decimal.TryParse(txtAmount.Text, out var amount) || amount <= 0)
+                {
+                    MessageBox.Show("Please enter a valid amount.", "Invalid Amount", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return;
+                }
+                
+                try
+                {
+                    using var ctx = new MicroLendDbContext();
+                    var user = ctx.Users.Find(_userId);
+                    if (user != null)
+                    {
+                        user.Balance += amount;
+                        ctx.SaveChanges();
+                        MessageBox.Show($"Successfully added ₱{amount:N2} to your account.", "Funds Added", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        dlg.Close();
+                        // Refresh dashboard
+                        UpdateSummary();
+                    }
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show("Error adding funds: " + ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+            };
+            btnCancel.Click += (s, e) => dlg.Close();
+            
+            dlg.Controls.Add(lblTitle);
+            dlg.Controls.Add(lblAmount);
+            dlg.Controls.Add(txtAmount);
+            dlg.Controls.Add(btnAdd);
+            dlg.Controls.Add(btnCancel);
+            dlg.ShowDialog(this);
         }
         
         private void Logout()

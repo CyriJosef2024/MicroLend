@@ -320,22 +320,34 @@ namespace MicroLend.DAL
                     // CSV may include an Id column as the first value. Handle both formats:
                     // Format A: Id,Username,Password,Role
                     // Format B: Username,Password,Role
+                    // Format C: Id,Username,Password,Role,Balance (with balance)
                     int parsedId = 0;
                     string username;
                     string password;
                     string role;
+                    decimal balance = 0m;
 
                     if (cols.Length >= 4 && int.TryParse(cols[0], out parsedId))
                     {
                         username = cols.ElementAtOrDefault(1) ?? string.Empty;
                         password = cols.ElementAtOrDefault(2) ?? string.Empty;
                         role = cols.ElementAtOrDefault(3) ?? "Borrower";
+                        // Parse Balance from column 4 if present
+                        if (cols.Length >= 5)
+                        {
+                            balance = decimal.TryParse(cols.ElementAtOrDefault(4), NumberStyles.Any, CultureInfo.InvariantCulture, out var b) ? b : 0m;
+                        }
                     }
                     else
                     {
                         username = cols.ElementAtOrDefault(0) ?? string.Empty;
                         password = cols.ElementAtOrDefault(1) ?? string.Empty;
                         role = cols.ElementAtOrDefault(2) ?? "Borrower";
+                        // Parse Balance from column 3 if present
+                        if (cols.Length >= 4)
+                        {
+                            balance = decimal.TryParse(cols.ElementAtOrDefault(3), NumberStyles.Any, CultureInfo.InvariantCulture, out var b) ? b : 0m;
+                        }
                     }
 
                     // Normalize trimmed values
@@ -348,6 +360,7 @@ namespace MicroLend.DAL
                         Username = username,
                         PasswordHash = ToSha256Hex(password),
                         Role = role,
+                        Balance = balance,
                         CreatedAt = DateTime.Now,
                         UpdatedAt = DateTime.Now
                     };
@@ -499,14 +512,20 @@ namespace MicroLend.DAL
                 {
                     var cols = SplitCsv(line);
 
-                    // Handle different CSV formats. Common format in this project:
-                    // Id,Purpose,TargetAmount,CurrentAmount,IsApproved,BorrowerId
+                    // Handle different CSV formats:
+                    // Old format: Id,Purpose,TargetAmount,CurrentAmount,IsApproved,BorrowerId
+                    // New format: Id,Purpose,TargetAmount,CurrentAmount,IsApproved,BorrowerId,Status,RiskScore,InterestRate,IsCrowdfunded,DateGranted
                     int parsedId = 0;
                     string purpose = string.Empty;
                     decimal target = 0m;
                     decimal current = 0m;
                     bool isApproved = false;
                     int borrowerId = 0;
+                    string status = "Funding";
+                    double riskScore = 0;
+                    decimal interestRate = 5.0m;
+                    bool isCrowdfunded = true;
+                    DateTime? dateGranted = null;
 
                     if (cols.Length >= 6 && int.TryParse(cols[0], out parsedId))
                     {
@@ -515,6 +534,32 @@ namespace MicroLend.DAL
                         current = decimal.TryParse(cols.ElementAtOrDefault(3), NumberStyles.Any, CultureInfo.InvariantCulture, out var c) ? c : 0m;
                         isApproved = bool.TryParse(cols.ElementAtOrDefault(4), out var ap) ? ap : false;
                         borrowerId = int.TryParse(cols.ElementAtOrDefault(5), out var bid) ? bid : 0;
+
+                        // Parse new columns if present (Status, RiskScore, InterestRate, IsCrowdfunded, DateGranted)
+                        if (cols.Length >= 7)
+                        {
+                            status = cols.ElementAtOrDefault(6) ?? "Funding";
+                        }
+                        if (cols.Length >= 8)
+                        {
+                            riskScore = double.TryParse(cols.ElementAtOrDefault(7), out var rs) ? rs : 0;
+                        }
+                        if (cols.Length >= 9)
+                        {
+                            interestRate = decimal.TryParse(cols.ElementAtOrDefault(8), NumberStyles.Any, CultureInfo.InvariantCulture, out var ir) ? ir : 5.0m;
+                        }
+                        if (cols.Length >= 10)
+                        {
+                            isCrowdfunded = bool.TryParse(cols.ElementAtOrDefault(9), out var ic) ? ic : true;
+                        }
+                        if (cols.Length >= 11)
+                        {
+                            var dateStr = cols.ElementAtOrDefault(10);
+                            if (!string.IsNullOrWhiteSpace(dateStr))
+                            {
+                                dateGranted = DateTime.TryParse(dateStr, out var dg) ? dg : null;
+                            }
+                        }
                     }
                     else
                     {
@@ -545,11 +590,12 @@ namespace MicroLend.DAL
                         TargetAmount = target,
                         CurrentAmount = current,
                         Amount = target,
-                        InterestRate = 5.0m,
-                        Status = isApproved ? "Active" : "Funding",
-                        IsCrowdfunded = true,
+                        InterestRate = interestRate,
+                        Status = status,
+                        IsCrowdfunded = isCrowdfunded,
+                        RiskScore = riskScore,
                         BorrowerId = borrowerId,
-                        DateGranted = null,
+                        DateGranted = dateGranted,
                         CreatedAt = DateTime.Now,
                         UpdatedAt = DateTime.Now
                     };

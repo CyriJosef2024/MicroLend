@@ -19,6 +19,8 @@ namespace MicroLend.UI
         private ComboBox cmbStatus;
         private Button btnApply;
         private DataGridView dgvLoans;
+        private CheckBox chkAgreeTerms;
+        private Button btnViewTerms;
 
         public LoansForm(int userId)
         {
@@ -94,6 +96,26 @@ namespace MicroLend.UI
 
             lblUploaded = new Label { Text = "No document uploaded", Location = new Point(15, 200), AutoSize = true, ForeColor = Color.Gray };
 
+            // Agreement checkbox and terms button
+            chkAgreeTerms = new CheckBox
+            {
+                Text = "I agree to the Terms and Conditions",
+                Location = new Point(15, 235),
+                AutoSize = true,
+                ForeColor = Color.FromArgb(0, 102, 204)
+            };
+
+            btnViewTerms = new Button
+            {
+                Text = "View Terms",
+                Location = new Point(250, 233),
+                Size = new Size(100, 25),
+                FlatStyle = FlatStyle.Flat,
+                BackColor = Color.FromArgb(108, 117, 125),
+                ForeColor = Color.White
+            };
+            btnViewTerms.Click += (s, e) => ShowTermsDialog();
+
             formPanel.Controls.Add(lblPurpose);
             formPanel.Controls.Add(txtPurpose);
             formPanel.Controls.Add(lblAmount);
@@ -103,6 +125,8 @@ namespace MicroLend.UI
             formPanel.Controls.Add(btnApply);
             formPanel.Controls.Add(btnUploadDoc);
             formPanel.Controls.Add(lblUploaded);
+            formPanel.Controls.Add(chkAgreeTerms);
+            formPanel.Controls.Add(btnViewTerms);
 
             var listPanel = new Panel
             {
@@ -213,6 +237,12 @@ namespace MicroLend.UI
 
         private void BtnApply_Click(object? sender, EventArgs e)
         {
+            if (!chkAgreeTerms.Checked)
+            {
+                MessageBox.Show("You must agree to the Terms and Conditions to apply for a loan.", "Agreement Required", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
             if (string.IsNullOrWhiteSpace(txtPurpose.Text))
             {
                 MessageBox.Show("Please enter loan purpose.", "Validation Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
@@ -375,6 +405,67 @@ namespace MicroLend.UI
             {
                 MessageBox.Show("Error uploading document: " + ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
+        }
+
+        private void ShowTermsDialog()
+        {
+            var termsText = @"MICROLEND TERMS AND CONDITIONS
+
+1. LOAN AGREEMENT
+By applying for a loan through MicroLend, you agree to repay the principal amount plus applicable interest within the agreed repayment schedule.
+
+2. INTEREST RATES
+- Interest rates range from 5% to 15% depending on your credit assessment
+- Interest is calculated on the principal amount outstanding
+
+3. REPAYMENT TERMS
+- Monthly repayments must be made on or before the due date
+- Late payments may incur additional fees and affect your credit score
+- Early repayment is allowed without penalty
+
+4. DOCUMENTATION
+- Borrowers must provide valid identification and supporting documents
+- All documents must be authentic and current
+- Failure to provide required documents may result in loan rejection
+
+5. CROWD-FUNDING
+- Some loans may be crowd-funded by multiple lenders
+- Loan disbursement requires full funding from lenders
+- Partial funding will be refunded to lenders
+
+6. DEFAULT
+- Failure to repay may result in legal action
+- Defaulted loans will be reported to credit bureaus
+- Collection agencies may be engaged for defaulted loans
+
+7. PRIVACY
+- Your personal information will be kept confidential
+- Data may be used for credit assessment purposes
+- We do not share your information with third parties
+
+8. AMENDMENTS
+- MicroLend reserves the right to modify these terms
+- Updated terms will be posted on the platform
+- Continued use of the platform constitutes acceptance of new terms
+
+By checking the agreement box, you acknowledge that you have read, understood, and agree to these terms and conditions.";
+
+            using var dlg = new Form { Text = "Terms and Conditions", Width = 600, Height = 500, StartPosition = FormStartPosition.CenterParent };
+            var txtTerms = new TextBox
+            {
+                Multiline = true,
+                ScrollBars = ScrollBars.Vertical,
+                ReadOnly = true,
+                Text = termsText,
+                Location = new Point(10, 10),
+                Size = new Size(560, 400),
+                Font = new Font("Segoe UI", 9)
+            };
+            var btnClose = new Button { Text = "Close", Location = new Point(480, 420), Size = new Size(80, 30) };
+            btnClose.Click += (s, e) => dlg.Close();
+            dlg.Controls.Add(txtTerms);
+            dlg.Controls.Add(btnClose);
+            dlg.ShowDialog(this);
         }
     }
 }

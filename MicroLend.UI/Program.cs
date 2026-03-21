@@ -26,8 +26,11 @@ namespace MicroLend.UI
             // column which previously caused save errors.
             try
             {
+                // Check both possible database locations
+                var localDbPath = System.IO.Path.Combine(System.Environment.GetFolderPath(System.Environment.SpecialFolder.LocalApplicationData), "MicroLend", "MicroLend.db");
                 var dbPath = System.IO.Path.Combine(AppContext.BaseDirectory, "MicroLend.db");
-                if (System.IO.File.Exists(dbPath))
+                var existingDbPath = System.IO.File.Exists(localDbPath) ? localDbPath : (System.IO.File.Exists(dbPath) ? dbPath : null);
+                if (existingDbPath != null)
                 {
                     try
                     {
@@ -65,7 +68,7 @@ namespace MicroLend.UI
                             {
                                 // If we cannot alter the DB (locked or incompatible), fall back to recreating it.
                                 try { conn.Close(); } catch { }
-                                try { System.IO.File.Delete(dbPath); } catch { }
+                                try { if (existingDbPath != null) System.IO.File.Delete(existingDbPath); } catch { }
                             }
                         }
                         else

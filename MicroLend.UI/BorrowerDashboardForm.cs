@@ -97,7 +97,10 @@ namespace MicroLend.UI
     LoanId INTEGER,
     FileName TEXT NOT NULL,
     FilePath TEXT NOT NULL,
-    UploadedAt TEXT NOT NULL
+    UploadedAt TEXT NOT NULL,
+    Status TEXT NOT NULL DEFAULT 'Pending',
+    ReviewedBy INTEGER,
+    ReviewedAt TEXT
 );";
             cmd.ExecuteNonQuery();
             try { conn.Close(); } catch { }

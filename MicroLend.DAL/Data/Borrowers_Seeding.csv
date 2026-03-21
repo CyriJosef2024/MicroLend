@@ -2,3 +2,8 @@ Id,FullName,ContactInfo,MonthlyIncome,UserId
 1,Alice Smith,alice@example.com,12000.00,1
 2,Bob Johnson,bob@example.com,15000.00,2
 3,Charlie Park,charlie@example.com,9000.00,3
+4,Diana Reyes,diana@example.com,18000.00,8
+5,Edward Tan,edward@example.com,22000.00,9
+6,Fiona Lee,fiona@example.com,11000.00,10
+7,George Cruz,george@example.com,14000.00,11
+8,Hannah Wei,hannah@example.com,16000.00,12

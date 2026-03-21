@@ -7,4 +7,6 @@ public class User : BaseEntity
     public string Role { get; set; } = "Borrower"; // Admin, Lender, Borrower
     // optional cached initial credit score (0-100)
     public int InitialCreditScore { get; set; } = 0;
+    // Lender's available funds for investing
+    public decimal Balance { get; set; } = 0;
 }
