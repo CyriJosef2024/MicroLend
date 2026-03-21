@@ -354,5 +354,53 @@ dotnet build MicroLend.Web/MicroLend.Web.csproj
 - **Web:** ASP.NET Core MVC
 - **Password Hashing:** SHA256
 
+## Technology stack
+
+- Languages: C# (targeting .NET 10, C# 14)
+- Web: ASP.NET Core MVC with Razor views and Bootstrap 5 for responsive UI
+- Data access: Entity Framework Core 10 (SQLite provider)
+- Desktop: Windows Forms (.NET WinForms)
+- Client-side: jQuery (validation) and optional AJAX for uploads
+
+## Document upload & verification (what we changed and how it works)
+
+- Upload storage: uploaded files are saved to `wwwroot/uploads` by the web implementation `MicroLend.Web/Services/WebDocumentService.cs`.
+- Database: metadata is stored in the `Documents` table via `MicroLend.DAL.Entities.Document` (fields: `Id`, `UserId`, `LoanId`, `FileName`, `FilePath`, `UploadedAt`, `Status`, `ReviewedBy`, `ReviewedAt`).
+- Default status: when a borrower uploads a document its `Status` is `Pending`.
+- Admin review: an admin can view `/Admin/UploadedDocuments` and click Approve/Reject. That calls `AdminController.VerifyDocument` which updates `Status`, `ReviewedBy`, and `ReviewedAt`.
+
+## DAL / BLL responsibilities (brief)
+
+- DAL (MicroLend.DAL): owns entity definitions, DbContext, migrations, and repository classes. Persisting a document involves adding a `Document` entity and calling `SaveChanges()` on `MicroLendDbContext`.
+- BLL (MicroLend.BLL): contains service-layer logic (credit scoring, loan business rules, repayment handling, investment workflows). The credit quiz service calculates the score and persists a `CreditScore` record and updates `User.InitialCreditScore`.
+
+## Why an upload might appear to "just refresh" and not be recorded
+
+1. Missing anti-forgery token on the form. The upload form needs an antiforgery token (the project now includes `@Html.AntiForgeryToken()` in the upload partial). If you use AJAX you must include the token in the request.
+2. Client-side JS may be intercepting the form and not sending the file. Check the browser DevTools -> Network to confirm the POST to `/Borrower/UploadDocument` contains the file payload and returns a JSON response or redirect.
+3. Server-side validation rejects the file silently. `WebDocumentService.SaveDocumentAsync` will return an empty string when:
+   - file extension is not allowed (.pdf, .jpg, .jpeg, .png, .doc, .docx are permitted),
+   - file size exceeds 5 MB, or
+   - an IO error occurred while writing the file.
+   When that happens the controller sets `TempData["Error"]` and redirects to `/Borrower/Upload`.
+4. Database save failed. After saving the file, the controller creates a `Document` entity and calls `SaveChanges()`. If `SaveChanges()` throws, the controller captures the exception and shows an error message. Check application logs or the Admin `Logs` page.
+
+## How to verify an upload succeeded (quick checklist)
+
+1. Upload the file from a Borrower account.
+2. Check the web response in the browser DevTools Network tab. A successful form POST will either return JSON (if AJAX) or redirect to a page with a success TempData message.
+3. Confirm the file exists under `MicroLend.Web/wwwroot/uploads`.
+4. Inspect the `Documents` table in the SQLite DB (file path printed by `MicroLendDbContext` configuration). Look for a row with `UserId`, `FilePath` and `UploadedAt`.
+5. Admin: visit `/Admin/UploadedDocuments` to view the pending file and use Approve/Reject. Approval sets `Status = "Approved"` and updates `ReviewedBy`/`ReviewedAt`.
+
+## Next steps I applied in code (DAL / BLL)
+
+- Added `Status`, `ReviewedBy`, and `ReviewedAt` to `Document` entity and migration so Admin can approve/reject uploaded documents.
+- Ensured the upload partial emits an antiforgery token and the controller action honors it.
+- Controller persists a `Document` row after the file is written to disk.
+- Admin controller exposes `UploadedDocuments` view and `VerifyDocument` action for approving/rejecting documents.
+
+If you still see the page refresh without records after following the checklist, capture the browser Network request and the server exception text (if any) and paste them here. I will inspect the failing request and pinpoint the DAL or BLL problem.
+
 
 Adding Additional Co-Authors for testing. 

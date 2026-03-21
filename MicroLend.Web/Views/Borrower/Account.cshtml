@@ -1,0 +1,31 @@
+@model MicroLend.DAL.Entities.Borrower
+@{
+    Layout = "_Layout";
+}
+<div class="container py-4">
+    <h2>Account Settings</h2>
+    <form method="post" asp-action="Account">
+        @Html.AntiForgeryToken()
+        <div class="mb-3">
+            <label class="form-label">Full name</label>
+            <input class="form-control" name="Name" value="@Model?.Name" />
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Contact number</label>
+            <input class="form-control" name="ContactNumber" value="@Model?.ContactNumber" />
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Monthly income</label>
+            <input class="form-control" type="number" step="0.01" name="MonthlyIncome" value="@Model?.MonthlyIncome" />
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Business type</label>
+            <input class="form-control" name="BusinessType" value="@Model?.BusinessType" />
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Verified</label>
+            <input class="form-control" disabled value="@(Model?.IsVerified == true ? "Yes" : "No")" />
+        </div>
+        <button class="btn btn-primary">Save</button>
+    </form>
+</div>

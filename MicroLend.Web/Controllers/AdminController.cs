@@ -203,6 +203,47 @@ namespace MicroLend.Web.Controllers
             {
                 return View((object)"Error reading logs.");
             }
+
+        }
+
+        [Microsoft.AspNetCore.Authorization.Authorize(Roles = "Admin")]
+        public IActionResult UploadedDocuments()
+        {
+            try
+            {
+                using var ctx = new MicroLend.DAL.MicroLendDbContext();
+                var list = ctx.Documents.OrderByDescending(d => d.UploadedAt).ToList();
+                return View(list);
+            }
+            catch
+            {
+                return View(new System.Collections.Generic.List<MicroLend.DAL.Entities.Document>());
+            }
+        }
+
+        [Microsoft.AspNetCore.Authorization.Authorize(Roles = "Admin")]
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public IActionResult VerifyDocument(int id, bool approve)
+        {
+            try
+            {
+                using var ctx = new MicroLend.DAL.MicroLendDbContext();
+                var d = ctx.Documents.Find(id);
+                if (d == null) return NotFound();
+                d.Status = approve ? "Approved" : "Rejected";
+                var idClaim = User?.Claims.FirstOrDefault(c => c.Type == System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+                if (int.TryParse(idClaim, out var adminId)) d.ReviewedBy = adminId;
+                d.ReviewedAt = System.DateTime.Now;
+                ctx.Documents.Update(d);
+                ctx.SaveChanges();
+                TempData["Success"] = approve ? "Document approved." : "Document rejected.";
+            }
+            catch (System.Exception ex)
+            {
+                TempData["Error"] = "Error updating document: " + ex.Message;
+            }
+            return RedirectToAction("UploadedDocuments");
         }
     }
 }

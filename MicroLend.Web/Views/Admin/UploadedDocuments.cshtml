@@ -1,0 +1,31 @@
+@model IEnumerable<MicroLend.DAL.Entities.Document>
+@{
+    Layout = "_Layout";
+}
+<div class="container py-4">
+    <h2>Uploaded Documents</h2>
+    <table class="table">
+        <thead>
+            <tr><th>Id</th><th>UserId</th><th>File</th><th>UploadedAt</th><th>Actions</th></tr>
+        </thead>
+        <tbody>
+            @foreach(var d in Model)
+            {
+                <tr>
+                    <td>@d.Id</td>
+                    <td>@d.UserId</td>
+                    <td><a href="@d.FilePath" target="_blank">@d.FileName</a></td>
+                    <td>@d.UploadedAt</td>
+                    <td>
+                        <form method="post" asp-action="VerifyDocument" class="d-inline">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="id" value="@d.Id" />
+                            <button name="approve" value="true" class="btn btn-sm btn-success">Approve</button>
+                            <button name="approve" value="false" class="btn btn-sm btn-danger">Reject</button>
+                        </form>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>

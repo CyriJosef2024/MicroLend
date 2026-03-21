@@ -71,7 +71,8 @@ namespace MicroLend.Web.Controllers
 
             await _loanSvc.ApplyLoanAsync(userId, amount, purpose, score);
             TempData["Success"] = "Loan application submitted.";
-            return RedirectToAction("Dashboard");
+            // After successful upload, redirect borrower to Apply so they can continue loan application
+            return RedirectToAction("Apply");
         }
 
         public async Task<IActionResult> MyLoans()
@@ -84,6 +85,12 @@ namespace MicroLend.Web.Controllers
             }
             var repo = new MicroLend.DAL.Repositories.LoanRepository();
             var loans = await repo.GetLoansByBorrowerAsync(userId);
+            // compute outstanding balance for each loan (CurrentAmount is treated as outstanding)
+            foreach (var l in loans)
+            {
+                // ensure CurrentAmount is set
+                if (l.CurrentAmount == 0 && l.Amount > 0) l.CurrentAmount = l.Amount;
+            }
             return View(loans);
         }
 
@@ -100,6 +107,21 @@ namespace MicroLend.Web.Controllers
                 if (int.TryParse(idClaim, out var parsed)) userId = parsed;
             }
             string path;
+            // basic server-side validation to provide clearer error messages
+            var allowed = new[] { ".pdf", ".jpg", ".jpeg", ".png", ".doc", ".docx" };
+            var ext = System.IO.Path.GetExtension(file.FileName).ToLowerInvariant();
+            if (!allowed.Contains(ext))
+            {
+                TempData["Error"] = "File type not allowed. Allowed: pdf, jpg, jpeg, png, doc, docx.";
+                return RedirectToAction("Upload");
+            }
+            const long maxBytes = 5 * 1024 * 1024; // 5 MB
+            if (file.Length > maxBytes)
+            {
+                TempData["Error"] = "File exceeds maximum allowed size of 5 MB.";
+                return RedirectToAction("Upload");
+            }
+
             try
             {
                 path = await _documentSvc.SaveDocumentAsync(file, userId, null);
@@ -114,7 +136,8 @@ namespace MicroLend.Web.Controllers
 
             if (string.IsNullOrWhiteSpace(path))
             {
-                TempData["Error"] = "Server failed to save the uploaded file.";
+                // SaveDocumentAsync returned empty string: provide generic guidance
+                TempData["Error"] = "Server failed to save the uploaded file. Check allowed file types and size.";
                 return RedirectToAction("Upload");
             }
 
@@ -125,6 +148,7 @@ namespace MicroLend.Web.Controllers
                 var doc = new MicroLend.DAL.Entities.Document { UserId = userId, FileName = file.FileName, FilePath = path, UploadedAt = System.DateTime.Now };
                 ctx.Documents.Add(doc);
                 await ctx.SaveChangesAsync();
+                // document record persisted; verification status is computed from Documents table
                 // return id as JSON when called via AJAX or from client
                 if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
                 {
@@ -142,6 +166,53 @@ namespace MicroLend.Web.Controllers
                     return Json(new { success = false, error = msg });
                 }
             }
+            return RedirectToAction("Apply");
+        }
+
+        // GET: account settings for borrower
+        public IActionResult Account()
+        {
+            int userId = 1;
+            if (User.Identity?.IsAuthenticated == true)
+            {
+                var idClaim = User.Claims.FirstOrDefault(c => c.Type == System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+                if (int.TryParse(idClaim, out var parsed)) userId = parsed;
+            }
+            var repo = new MicroLend.DAL.Repositories.BorrowerRepository();
+            var borrower = repo.GetAllAsync().GetAwaiter().GetResult().FirstOrDefault(b => b.UserId == userId);
+            if (borrower == null)
+            {
+                borrower = new MicroLend.DAL.Entities.Borrower { UserId = userId, Name = "", ContactNumber = "" };
+            }
+            return View(borrower);
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Account([FromForm] MicroLend.DAL.Entities.Borrower model)
+        {
+            int userId = 1;
+            if (User.Identity?.IsAuthenticated == true)
+            {
+                var idClaim = User.Claims.FirstOrDefault(c => c.Type == System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+                if (int.TryParse(idClaim, out var parsed)) userId = parsed;
+            }
+            var repo = new MicroLend.DAL.Repositories.BorrowerRepository();
+            var existing = repo.GetAllAsync().GetAwaiter().GetResult().FirstOrDefault(b => b.UserId == userId);
+            if (existing == null)
+            {
+                model.UserId = userId;
+                await repo.AddAsync(model);
+            }
+            else
+            {
+                existing.Name = model.Name;
+                existing.ContactNumber = model.ContactNumber;
+                existing.MonthlyIncome = model.MonthlyIncome;
+                existing.BusinessType = model.BusinessType;
+                await repo.UpdateAsync(existing);
+            }
+            TempData["Success"] = "Account settings saved.";
             return RedirectToAction("Dashboard");
         }
 

@@ -19,7 +19,10 @@ namespace MicroLend.DAL.Migrations
                     LoanId = table.Column<int>(type: "INTEGER", nullable: true),
                     FileName = table.Column<string>(type: "TEXT", nullable: false),
                     FilePath = table.Column<string>(type: "TEXT", nullable: false),
-                    UploadedAt = table.Column<DateTime>(type: "TEXT", nullable: false)
+                    UploadedAt = table.Column<DateTime>(type: "TEXT", nullable: false),
+                    Status = table.Column<string>(type: "TEXT", nullable: false, defaultValue: "Pending"),
+                    ReviewedBy = table.Column<int>(type: "INTEGER", nullable: true),
+                    ReviewedAt = table.Column<DateTime>(type: "TEXT", nullable: true)
                 },
                 constraints: table =>
                 {

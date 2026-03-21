@@ -104,6 +104,14 @@ namespace MicroLend.BLL.Services
             if (!await CanBorrowerGetNewLoan(borrowerId))
                 throw new InvalidOperationException("Borrower already has an active loan.");
 
+            // require at least one approved document for borrower before applying
+            using (var ctx = new MicroLend.DAL.MicroLendDbContext())
+            {
+                var hasApproved = ctx.Documents.Any(d => d.UserId == borrowerId && d.Status == "Approved");
+                if (!hasApproved)
+                    throw new InvalidOperationException("Borrower must have an approved document before applying for a loan.");
+            }
+
             var loan = new Loan
             {
                 BorrowerId = borrowerId,

@@ -20,6 +20,25 @@ public class Borrower
     // Optional one-to-one credit score record
     public CreditScore? CreditScore { get; set; }
 
+    // Whether borrower uploaded verification documents (computed from Documents table)
+    [System.ComponentModel.DataAnnotations.Schema.NotMapped]
+    public bool IsVerified
+    {
+        get
+        {
+            try
+            {
+                using var ctx = new MicroLend.DAL.MicroLendDbContext();
+                if (UserId == null) return false;
+                return ctx.Documents.Any(d => d.UserId == UserId.Value);
+            }
+            catch
+            {
+                return false;
+            }
+        }
+    }
+
     // Loans requested by this borrower
     public ICollection<Loan> Loans { get; set; } = new List<Loan>();
 }
