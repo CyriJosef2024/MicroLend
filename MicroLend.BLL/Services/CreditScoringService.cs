@@ -1,4 +1,5 @@
 ﻿using MicroLend.DAL.Entities;
+using MicroLend.DAL.Exceptions;
 using MicroLend.DAL.Repositories;
 using System;
 using System.Collections.Generic;
@@ -47,40 +48,74 @@ namespace MicroLend.BLL.Services
 
         public async Task<int> CalculateScore(Dictionary<int, int> selectedOptionIds)
         {
-            var questions = GetQuestions();
-            int total = 0;
-            foreach (var q in questions)
+            try
             {
-                if (selectedOptionIds.TryGetValue(q.Id, out int optId))
+                var questions = GetQuestions();
+                int total = 0;
+                foreach (var q in questions)
                 {
-                    var opt = q.Options.FirstOrDefault(o => o.Id == optId);
-                    if (opt != null)
-                        total += opt.Points;
+                    if (selectedOptionIds.TryGetValue(q.Id, out int optId))
+                    {
+                        var opt = q.Options.FirstOrDefault(o => o.Id == optId);
+                        if (opt != null)
+                            total += opt.Points;
+                    }
                 }
+                // Normalize 0-100 assuming min possible = -50, max = 100 (adjust based on your questions)
+                int minPossible = -50, maxPossible = 100;
+                int normalized = (int)((total - minPossible) / (double)(maxPossible - minPossible) * 100);
+                return Math.Max(0, Math.Min(100, normalized));
             }
-            // Normalize 0-100 assuming min possible = -50, max = 100 (adjust based on your questions)
-            int minPossible = -50, maxPossible = 100;
-            int normalized = (int)((total - minPossible) / (double)(maxPossible - minPossible) * 100);
-            return Math.Max(0, Math.Min(100, normalized));
+            catch (Exception ex)
+            {
+                MicroLend.DAL.Logger.LogError("Error calculating credit score", ex);
+                throw new BusinessException("An error occurred while calculating your credit score. Please try again.");
+            }
         }
 
         public async Task SaveScore(int userId, int score, Dictionary<int, int> answers)
         {
-            var details = JsonSerializer.Serialize(answers);
-            var cs = new CreditScore
+            try
             {
-                UserId = userId,
-                Score = score,
-                QuizDate = DateTime.Now,
-                Details = details
-            };
-            await _creditRepo.AddAsync(cs);
+                var details = JsonSerializer.Serialize(answers);
+                var cs = new CreditScore
+                {
+                    UserId = userId,
+                    Score = score,
+                    QuizDate = DateTime.Now,
+                    Details = details
+                };
+                await _creditRepo.AddAsync(cs);
+            }
+            catch (DataAccessException ex)
+            {
+                MicroLend.DAL.Logger.LogError($"Data access error while saving credit score for user {userId}", ex);
+                throw new BusinessException("Unable to save your credit score. Please try again later.");
+            }
+            catch (Exception ex)
+            {
+                MicroLend.DAL.Logger.LogError($"Unexpected error while saving credit score for user {userId}", ex);
+                throw new BusinessException("An unexpected error occurred while saving your credit score. Please contact support.");
+            }
         }
 
         public async Task<int?> GetLatestScore(int userId)
         {
-            var scores = await _creditRepo.GetByUserIdAsync(userId);
-            return scores.OrderByDescending(s => s.QuizDate).FirstOrDefault()?.Score;
+            try
+            {
+                var scores = await _creditRepo.GetByUserIdAsync(userId);
+                return scores.OrderByDescending(s => s.QuizDate).FirstOrDefault()?.Score;
+            }
+            catch (DataAccessException ex)
+            {
+                MicroLend.DAL.Logger.LogError($"Data access error while retrieving latest credit score for user {userId}", ex);
+                throw new BusinessException("Unable to retrieve your credit score. Please try again later.");
+            }
+            catch (Exception ex)
+            {
+                MicroLend.DAL.Logger.LogError($"Unexpected error while retrieving latest credit score for user {userId}", ex);
+                throw new BusinessException("An unexpected error occurred while retrieving your credit score. Please contact support.");
+            }
         }
     }
 
@@ -92,10 +127,23 @@ namespace MicroLend.BLL.Services
 
         public async Task<int> ScoreAndSaveAsync(int userId, Dictionary<int,int> answers, decimal income)
         {
-            var s = await _engine.CalculateScoreAsync(userId, answers, income);
-            var cs = new CreditScore { UserId = userId, Score = s, QuizDate = DateTime.Now, Details = System.Text.Json.JsonSerializer.Serialize(answers) };
-            await _repo.AddAsync(cs);
-            return s;
+            try
+            {
+                var s = await _engine.CalculateScoreAsync(userId, answers, income);
+                var cs = new CreditScore { UserId = userId, Score = s, QuizDate = DateTime.Now, Details = System.Text.Json.JsonSerializer.Serialize(answers) };
+                await _repo.AddAsync(cs);
+                return s;
+            }
+            catch (DataAccessException ex)
+            {
+                MicroLend.DAL.Logger.LogError($"Data access error in CreditScoringFacade for user {userId}", ex);
+                throw new BusinessException("Unable to process your credit score. Please try again later.");
+            }
+            catch (Exception ex)
+            {
+                MicroLend.DAL.Logger.LogError($"Unexpected error in CreditScoringFacade for user {userId}", ex);
+                throw new BusinessException("An unexpected error occurred while processing your credit score. Please contact support.");
+            }
         }
     }
 

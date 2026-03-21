@@ -201,9 +201,18 @@ namespace MicroLend.UI
 
                 dgvLoans.DataSource = loans;
             }
+            catch (MicroLend.DAL.Exceptions.BusinessException ex)
+            {
+                // Handle business exceptions with user-friendly messages
+                MessageBox.Show(ex.Message, "Application Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
             catch (Exception ex)
             {
-                MessageBox.Show("Error loading loans: " + ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                // Log the error for debugging
+                MicroLend.DAL.Logger.LogError("Unexpected error loading loans", ex);
+                // Show user-friendly message without technical details
+                MessageBox.Show("An error occurred while loading your loan applications. Please try again later or contact support if the problem persists.", 
+                    "System Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
@@ -299,9 +308,18 @@ namespace MicroLend.UI
 
                 DialogResult = DialogResult.OK;
             }
+            catch (MicroLend.DAL.Exceptions.BusinessException ex)
+            {
+                // Handle business exceptions with user-friendly messages
+                MessageBox.Show(ex.Message, "Application Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
             catch (Exception ex)
             {
-                MessageBox.Show("Error submitting loan application: " + ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                // Log the error for debugging
+                MicroLend.DAL.Logger.LogError("Unexpected error submitting loan application", ex);
+                // Show user-friendly message without technical details
+                MessageBox.Show("An error occurred while submitting your loan application. Please try again later or contact support if the problem persists.", 
+                    "System Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
