@@ -31,7 +31,9 @@ namespace MicroLend.UI
         private Panel loanDetailsPanel;
         // Payment controls for inline payment in Repayments tab
         private ComboBox cmbPaymentLoan;
+        private ComboBox cmbPaymentLoan_MakePayment; // For Make a Payment tab
         private TextBox txtPaymentAmount;
+        private TextBox txtPaymentAmount_MakePayment; // For Make a Payment tab
         private Button btnSubmitPayment;
         
         public BorrowerDashboardForm(int userId)
@@ -403,13 +405,14 @@ namespace MicroLend.UI
             };
             paymentContainer.Controls.Add(lblPayLoan, 0, 1);
 
-            cmbPaymentLoan = new ComboBox
+            cmbPaymentLoan_MakePayment = new ComboBox
             {
                 Size = new Size(320, 25),
                 DropDownStyle = ComboBoxStyle.DropDownList,
-                Margin = new Padding(0, 10, 0, 10)
+                Margin = new Padding(0, 10, 0, 10),
+                Name = "cmbPaymentLoan_MakePayment"
             };
-            paymentContainer.Controls.Add(cmbPaymentLoan, 1, 1);
+            paymentContainer.Controls.Add(cmbPaymentLoan_MakePayment, 1, 1);
 
             // Amount row
             var lblPayAmount = new Label
@@ -421,13 +424,14 @@ namespace MicroLend.UI
             };
             paymentContainer.Controls.Add(lblPayAmount, 0, 2);
 
-            txtPaymentAmount = new TextBox
+            txtPaymentAmount_MakePayment = new TextBox
             {
                 Size = new Size(200, 25),
                 Font = new Font("Segoe UI", 10),
-                Margin = new Padding(0, 10, 0, 10)
+                Margin = new Padding(0, 10, 0, 10),
+                Name = "txtPaymentAmount_MakePayment"
             };
-            paymentContainer.Controls.Add(txtPaymentAmount, 1, 2);
+            paymentContainer.Controls.Add(txtPaymentAmount_MakePayment, 1, 2);
 
             // Submit Payment Button - spans both columns
             btnSubmitPayment = new Button
@@ -1296,22 +1300,37 @@ namespace MicroLend.UI
 
         private void BtnSubmitPayment_Click(object? sender, EventArgs e)
         {
+            System.Diagnostics.Debug.WriteLine($"[DIAG] BtnSubmitPayment_Click called");
+            
+            // Use the Make a Payment tab controls
+            var loanCombo = cmbPaymentLoan_MakePayment;
+            var amountBox = txtPaymentAmount_MakePayment;
+            
+            if (loanCombo == null || amountBox == null) {
+                System.Diagnostics.Debug.WriteLine($"[DIAG] Controls not initialized");
+                MessageBox.Show("Payment controls not initialized. Please try again.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
+            }
+            
+            System.Diagnostics.Debug.WriteLine($"[DIAG] loanCombo items: {loanCombo.Items.Count}, SelectedItem: {loanCombo.SelectedItem}");
+            System.Diagnostics.Debug.WriteLine($"[DIAG] loanCombo parent: {loanCombo.Parent?.Name ?? "null"}");
+            
             // Validate loan selection
-            if (cmbPaymentLoan.SelectedItem == null)
+            if (loanCombo.SelectedItem == null)
             {
                 MessageBox.Show("Please select a loan to make payment for.", "No Selection", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
 
             // Validate amount
-            if (!decimal.TryParse(txtPaymentAmount.Text, out var amount) || amount <= 0)
+            if (!decimal.TryParse(amountBox.Text, out var amount) || amount <= 0)
             {
                 MessageBox.Show("Please enter a valid payment amount.", "Invalid Amount", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
 
             // Get selected loan
-            var selectedLoan = cmbPaymentLoan.SelectedItem as LoanItem;
+            var selectedLoan = loanCombo.SelectedItem as LoanItem;
             if (selectedLoan == null)
             {
                 MessageBox.Show("Invalid loan selection.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
@@ -1387,8 +1406,11 @@ namespace MicroLend.UI
                 ctx.Repayments.Add(repayment);
                 ctx.SaveChanges();
 
-                // Clear the amount field
-                txtPaymentAmount.Text = string.Empty;
+                // Clear the amount field (both tabs)
+                if (txtPaymentAmount_MakePayment != null)
+                    txtPaymentAmount_MakePayment.Text = string.Empty;
+                if (txtPaymentAmount != null)
+                    txtPaymentAmount.Text = string.Empty;
 
                 // Show success message with payment reference
                 MessageBox.Show(
@@ -1425,15 +1447,42 @@ namespace MicroLend.UI
         {
             try
             {
-                if (!EnsureDatabaseMigrated()) return;
+                System.Diagnostics.Debug.WriteLine($"[DIAG] PopulatePaymentLoanDropdown called for UserId: {_userId}");
+                
+                if (!EnsureDatabaseMigrated()) {
+                    System.Diagnostics.Debug.WriteLine("[DIAG] Database not migrated, returning");
+                    return;
+                }
 
                 using var ctx = new MicroLendDbContext();
                 var borrower = ctx.Borrowers.FirstOrDefault(b => b.UserId == _userId);
-                if (borrower == null) return;
+                if (borrower == null) {
+                    System.Diagnostics.Debug.WriteLine($"[DIAG] Borrower not found for UserId: {_userId}");
+                    MessageBox.Show("Borrower profile not found. Please contact support.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    return;
+                }
+                
+                System.Diagnostics.Debug.WriteLine($"[DIAG] Borrower found: Id={borrower.Id}");
 
+                System.Diagnostics.Debug.WriteLine($"[DIAG] Querying loans for BorrowerId: {borrower.Id}");
+                
+                // First check ALL loans for this borrower (not filtered)
+                var allLoans = ctx.Loans.Where(l => l.BorrowerId == borrower.Id).ToList();
+                System.Diagnostics.Debug.WriteLine($"[DIAG] Total loans found: {allLoans.Count}");
+                foreach(var l in allLoans) {
+                    System.Diagnostics.Debug.WriteLine($"[DIAG] Loan Id={l.Id}, Status={l.Status}, Purpose={l.Purpose}");
+                }
+
+                // Now filter by non-Pending status
                 var loans = ctx.Loans
                     .Where(l => l.BorrowerId == borrower.Id && l.Status != "Pending")
                     .ToList();
+
+                System.Diagnostics.Debug.WriteLine($"[DIAG] Loans after Status filter (not Pending): {loans.Count}");
+
+                if (loans.Count == 0) {
+                    MessageBox.Show("No active loans found for payment. You may need to wait for your loan to be approved.", "Info", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                }
 
                 // Get repayments for each loan to calculate outstanding
                 var loanItems = loans.Select(l =>
@@ -1449,8 +1498,24 @@ namespace MicroLend.UI
                     };
                 }).ToList();
 
-                cmbPaymentLoan.Items.Clear();
-                cmbPaymentLoan.Items.AddRange(loanItems.ToArray());
+                System.Diagnostics.Debug.WriteLine($"[DIAG] Populating payment dropdowns with {loanItems.Count} items");
+                
+                // Populate both dropdowns (Make a Payment tab AND Repayments tab)
+                // For Make a Payment tab
+                if (cmbPaymentLoan_MakePayment != null) {
+                    System.Diagnostics.Debug.WriteLine($"[DIAG] MakePayment dropdown parent: {cmbPaymentLoan_MakePayment.Parent?.Name ?? "null"}");
+                    cmbPaymentLoan_MakePayment.Items.Clear();
+                    cmbPaymentLoan_MakePayment.Items.AddRange(loanItems.ToArray());
+                }
+                
+                // For Repayments tab
+                if (cmbPaymentLoan != null) {
+                    System.Diagnostics.Debug.WriteLine($"[DIAG] Repayments dropdown parent: {cmbPaymentLoan.Parent?.Name ?? "null"}");
+                    cmbPaymentLoan.Items.Clear();
+                    cmbPaymentLoan.Items.AddRange(loanItems.ToArray());
+                }
+                
+                System.Diagnostics.Debug.WriteLine($"[DIAG] Dropdowns populated. ItemCount: {loanItems.Count}");
             }
             catch (Exception ex)
             {
