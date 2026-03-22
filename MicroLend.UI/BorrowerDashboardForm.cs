@@ -27,7 +27,12 @@ namespace MicroLend.UI
         private Label lblTotalBorrowed;
         private Label lblTotalRepaid;
         private Label lblOutstanding;
+        private Label lblLendedMoney;
         private Panel loanDetailsPanel;
+        // Payment controls for inline payment in Repayments tab
+        private ComboBox cmbPaymentLoan;
+        private TextBox txtPaymentAmount;
+        private Button btnSubmitPayment;
         
         public BorrowerDashboardForm(int userId)
         {
@@ -171,6 +176,12 @@ namespace MicroLend.UI
             lblOutstanding = card3.Controls[1] as Label;
             _summaryCards.Add(card3);
             _summaryPanel.Controls.Add(card3);
+
+            // Lended Money Card (CurrentAmount - the actual funded amount)
+            var card4 = CreateSummaryCard("Lended Money", "₱0.00", Color.FromArgb(156, 39, 176));
+            lblLendedMoney = card4.Controls[1] as Label;
+            _summaryCards.Add(card4);
+            _summaryPanel.Controls.Add(card4);
 
             Controls.Add(_summaryPanel);
 
@@ -348,6 +359,100 @@ namespace MicroLend.UI
             var tabRepayments = new TabPage("Repayments");
             var repaymentsPanel = new Panel { Dock = DockStyle.Fill };
 
+            // ==================== MAKE A PAYMENT TAB ====================
+            var tabMakePayment = new TabPage("Make a Payment");
+            var makePaymentPanel = new Panel { Dock = DockStyle.Fill, Padding = new Padding(20) };
+
+            // Payment container with TableLayoutPanel for better control
+            var paymentContainer = new TableLayoutPanel
+            {
+                Location = new Point(20, 20),
+                Size = new Size(600, 250),
+                BackColor = Color.White,
+                BorderStyle = BorderStyle.FixedSingle,
+                ColumnCount = 2,
+                RowCount = 4,
+                CellBorderStyle = TableLayoutPanelCellBorderStyle.None,
+                Padding = new Padding(10)
+            };
+            paymentContainer.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
+            paymentContainer.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
+            for (int i = 0; i < 4; i++)
+                paymentContainer.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+
+            // Payment title - spans both columns
+            var lblPayTitle = new Label
+            {
+                Text = "Make a Payment",
+                Font = new Font("Segoe UI", 16, FontStyle.Bold),
+                ForeColor = Color.FromArgb(0, 102, 204),
+                AutoSize = true,
+                Margin = new Padding(0, 0, 0, 15)
+            };
+            paymentContainer.SetCellPosition(lblPayTitle, new TableLayoutPanelCellPosition(0, 0));
+            paymentContainer.SetColumnSpan(lblPayTitle, 2);
+            paymentContainer.Controls.Add(lblPayTitle, 0, 0);
+
+            // Select Loan row
+            var lblPayLoan = new Label
+            {
+                Text = "Select Loan:",
+                Font = new Font("Segoe UI", 10),
+                AutoSize = true,
+                Margin = new Padding(0, 10, 20, 10)
+            };
+            paymentContainer.Controls.Add(lblPayLoan, 0, 1);
+
+            cmbPaymentLoan = new ComboBox
+            {
+                Size = new Size(320, 25),
+                DropDownStyle = ComboBoxStyle.DropDownList,
+                Margin = new Padding(0, 10, 0, 10)
+            };
+            paymentContainer.Controls.Add(cmbPaymentLoan, 1, 1);
+
+            // Amount row
+            var lblPayAmount = new Label
+            {
+                Text = "Amount (₱):",
+                Font = new Font("Segoe UI", 10),
+                AutoSize = true,
+                Margin = new Padding(0, 10, 20, 10)
+            };
+            paymentContainer.Controls.Add(lblPayAmount, 0, 2);
+
+            txtPaymentAmount = new TextBox
+            {
+                Size = new Size(200, 25),
+                Font = new Font("Segoe UI", 10),
+                Margin = new Padding(0, 10, 0, 10)
+            };
+            paymentContainer.Controls.Add(txtPaymentAmount, 1, 2);
+
+            // Submit Payment Button - spans both columns
+            btnSubmitPayment = new Button
+            {
+                Text = "Submit Payment",
+                Size = new Size(200, 40),
+                BackColor = Color.FromArgb(0, 120, 215),
+                ForeColor = Color.White,
+                FlatStyle = FlatStyle.Standard,
+                Font = new Font("Segoe UI", 11, FontStyle.Bold),
+                Cursor = Cursors.Hand,
+                Margin = new Padding(0, 20, 0, 0)
+            };
+            btnSubmitPayment.FlatAppearance.BorderSize = 1;
+            btnSubmitPayment.FlatAppearance.BorderColor = Color.White;
+            btnSubmitPayment.Click += BtnSubmitPayment_Click;
+            paymentContainer.SetCellPosition(btnSubmitPayment, new TableLayoutPanelCellPosition(0, 3));
+            paymentContainer.SetColumnSpan(btnSubmitPayment, 2);
+            paymentContainer.Controls.Add(btnSubmitPayment);
+
+            makePaymentPanel.Controls.Add(paymentContainer);
+            tabMakePayment.Controls.Add(makePaymentPanel);
+            tabControl.TabPages.Add(tabMakePayment);
+            // ==================== END MAKE A PAYMENT TAB ====================
+
             var repaymentsButtonContainer = new FlowLayoutPanel
             {
                 Dock = DockStyle.Top,
@@ -370,6 +475,64 @@ namespace MicroLend.UI
             _btnMakePaymentGlobal = btnMakePayment;
             repaymentsButtonContainer.Controls.Add(btnMakePayment);
 
+            // Inline Payment Panel - Add payment controls directly in the Repayments tab
+            var paymentPanel = new Panel
+            {
+                Dock = DockStyle.Top,
+                Height = 140,
+                Padding = new Padding(10),
+                BackColor = Color.White
+            };
+            paymentPanel.Paint += (s, e) => {
+                using var p = new Pen(Color.FromArgb(0, 120, 215), 2);
+                e.Graphics.DrawRectangle(p, 0, 0, paymentPanel.Width - 1, paymentPanel.Height - 1);
+            };
+
+            // Title
+            var lblPaymentTitle = new Label
+            {
+                Text = "Make a Payment",
+                Font = new Font("Segoe UI", 12, FontStyle.Bold),
+                ForeColor = Color.FromArgb(0, 102, 204),
+                Location = new Point(10, 10),
+                AutoSize = true
+            };
+            paymentPanel.Controls.Add(lblPaymentTitle);
+
+            // Row 1: Select Loan label and combo
+            var lblSelectLoan = new Label
+            {
+                Text = "Select Loan:",
+                Location = new Point(10, 40),
+                Size = new Size(80, 20)
+            };
+            paymentPanel.Controls.Add(lblSelectLoan);
+
+            cmbPaymentLoan = new ComboBox
+            {
+                Location = new Point(95, 38),
+                Size = new Size(280, 25),
+                DropDownStyle = ComboBoxStyle.DropDownList
+            };
+            paymentPanel.Controls.Add(cmbPaymentLoan);
+
+            // Row 2: Amount label, textbox
+            var lblAmount = new Label
+            {
+                Text = "Amount (₱):",
+                Location = new Point(10, 75),
+                Size = new Size(80, 20)
+            };
+            paymentPanel.Controls.Add(lblAmount);
+
+            txtPaymentAmount = new TextBox
+            {
+                Location = new Point(95, 73),
+                Size = new Size(150, 25),
+                Font = new Font("Segoe UI", 10)
+            };
+            paymentPanel.Controls.Add(txtPaymentAmount);
+
             dgvRepayments = new DataGridView
             {
                 Dock = DockStyle.Fill,
@@ -389,6 +552,7 @@ namespace MicroLend.UI
             dgvRepayments.Columns.Add(new DataGridViewTextBoxColumn { Name = "PaymentReference", HeaderText = "Reference", DataPropertyName = "PaymentReference" });
             // Repayments: add toolbar first so it docks to top, then grid fills remaining space
             repaymentsPanel.Controls.Add(repaymentsButtonContainer);
+            repaymentsPanel.Controls.Add(paymentPanel);
             repaymentsPanel.Controls.Add(dgvRepayments);
             tabRepayments.Controls.Add(repaymentsPanel);
             tabControl.TabPages.Add(tabRepayments);
@@ -647,7 +811,13 @@ namespace MicroLend.UI
                 {
                     var t = tabControl.SelectedTab.Text;
                     if (t == "My Loans") _ = LoadMyLoansAsync();
-                    if (t == "Repayments") _ = LoadRepaymentsAsync();
+                    if (t == "Repayments") {
+                        _ = LoadRepaymentsAsync();
+                        PopulatePaymentLoanDropdown();
+                    }
+                    if (t == "Make a Payment") {
+                        PopulatePaymentLoanDropdown();
+                    }
                     if (t == "Documents") LoadDocuments();
                 }
             };
@@ -699,6 +869,7 @@ namespace MicroLend.UI
             await LoadRepaymentsAsync();
             LoadDocuments();
             await LoadCreditScoreAsync();
+            PopulatePaymentLoanDropdown();
 
 #if DEBUG
             // For developer testing: if borrower has no documents and no loans, create sample entries so UI is visible
@@ -896,9 +1067,13 @@ namespace MicroLend.UI
                 
                 var outstanding = totalBorrowed - totalRepaid;
                 
+                // Lended Money = CurrentAmount (actual funded amount)
+                var lendedMoney = loans.Sum(l => l.CurrentAmount);
+                
                 lblTotalBorrowed.Text = $"₱{totalBorrowed:N2}";
                 lblTotalRepaid.Text = $"₱{totalRepaid:N2}";
                 lblOutstanding.Text = $"₱{outstanding:N2}";
+                lblLendedMoney.Text = $"₱{lendedMoney:N2}";
             }
             catch (Exception ex)
             {
@@ -1118,6 +1293,170 @@ namespace MicroLend.UI
                 BorrowerDashboardForm_Load(null, EventArgs.Empty);
             }
         }
+
+        private void BtnSubmitPayment_Click(object? sender, EventArgs e)
+        {
+            // Validate loan selection
+            if (cmbPaymentLoan.SelectedItem == null)
+            {
+                MessageBox.Show("Please select a loan to make payment for.", "No Selection", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            // Validate amount
+            if (!decimal.TryParse(txtPaymentAmount.Text, out var amount) || amount <= 0)
+            {
+                MessageBox.Show("Please enter a valid payment amount.", "Invalid Amount", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            // Get selected loan
+            var selectedLoan = cmbPaymentLoan.SelectedItem as LoanItem;
+            if (selectedLoan == null)
+            {
+                MessageBox.Show("Invalid loan selection.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
+            }
+
+            var loanId = selectedLoan.Id;
+            decimal outstanding = 0;
+
+            try
+            {
+                using var ctx = new MicroLendDbContext();
+
+                // Verify loan exists and belongs to borrower
+                var borrower = ctx.Borrowers.FirstOrDefault(b => b.UserId == _userId);
+                if (borrower == null)
+                {
+                    MessageBox.Show("Borrower profile not found.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    return;
+                }
+
+                var loan = ctx.Loans.FirstOrDefault(l => l.Id == loanId && l.BorrowerId == borrower.Id);
+                if (loan == null)
+                {
+                    MessageBox.Show("Loan not found.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    return;
+                }
+
+                // Check total repayments for this loan
+                var totalRepaid = ctx.Repayments.Where(r => r.LoanId == loanId).Sum(r => (decimal?)r.Amount) ?? 0;
+                outstanding = loan.TargetAmount - totalRepaid;
+
+                if (amount > outstanding)
+                {
+                    var result = MessageBox.Show($"The outstanding balance is ₱{outstanding:N2}.\nDo you want to pay the full amount?", "Overpayment", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
+                    if (result == DialogResult.Yes)
+                    {
+                        amount = outstanding;
+                    }
+                    else
+                    {
+                        return;
+                    }
+                }
+
+                // Show confirmation dialog before processing payment
+                var confirmResult = MessageBox.Show(
+                    $"Please confirm your payment details:\n\n" +
+                    $"Loan: {loan.Purpose} (ID: {loan.Id})\n" +
+                    $"Amount: ₱{amount:N2}\n" +
+                    $"Payment Method: Online\n\n" +
+                    "Do you want to proceed with this payment?",
+                    "Confirm Payment",
+                    MessageBoxButtons.YesNo,
+                    MessageBoxIcon.Question);
+
+                if (confirmResult != DialogResult.Yes)
+                {
+                    MessageBox.Show("Payment cancelled.", "Cancelled", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    return;
+                }
+
+                // Create repayment record
+                var repayment = new MicroLend.DAL.Entities.Repayment
+                {
+                    LoanId = loanId,
+                    Amount = amount,
+                    PaymentDate = DateTime.Now,
+                    PaymentMethod = "Online",
+                    PaymentReference = "PAY-" + DateTime.Now.ToString("yyyyMMddHHmmss")
+                };
+
+                ctx.Repayments.Add(repayment);
+                ctx.SaveChanges();
+
+                // Clear the amount field
+                txtPaymentAmount.Text = string.Empty;
+
+                // Show success message with payment reference
+                MessageBox.Show(
+                    $"Payment submitted successfully!\n\n" +
+                    $"Payment Reference: {repayment.PaymentReference}\n" +
+                    $"Amount: ₱{amount:N2}\n" +
+                    $"Date: {repayment.PaymentDate:g}\n\n" +
+                    "The dashboard will now refresh to show the updated balances.",
+                    "Payment Success",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Information);
+
+                // Refresh all data in real-time
+                RefreshBorrowerData();
+
+                // Also reload repayments grid to show the new payment
+                _ = LoadRepaymentsAsync();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error processing payment: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        // Helper class for loan dropdown items
+        private class LoanItem
+        {
+            public int Id { get; set; }
+            public string DisplayText { get; set; } = string.Empty;
+            public override string ToString() => DisplayText;
+        }
+
+        private void PopulatePaymentLoanDropdown()
+        {
+            try
+            {
+                if (!EnsureDatabaseMigrated()) return;
+
+                using var ctx = new MicroLendDbContext();
+                var borrower = ctx.Borrowers.FirstOrDefault(b => b.UserId == _userId);
+                if (borrower == null) return;
+
+                var loans = ctx.Loans
+                    .Where(l => l.BorrowerId == borrower.Id && l.Status != "Pending")
+                    .ToList();
+
+                // Get repayments for each loan to calculate outstanding
+                var loanItems = loans.Select(l =>
+                {
+                    var totalRepaid = ctx.Repayments
+                        .Where(r => r.LoanId == l.Id)
+                        .Sum(r => (decimal?)r.Amount) ?? 0;
+                    var outstanding = l.TargetAmount - totalRepaid;
+                    return new LoanItem
+                    {
+                        Id = l.Id,
+                        DisplayText = $"Loan #{l.Id} - {l.Purpose} (Outstanding: ₱{outstanding:N2})"
+                    };
+                }).ToList();
+
+                cmbPaymentLoan.Items.Clear();
+                cmbPaymentLoan.Items.AddRange(loanItems.ToArray());
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error loading loans: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
         
         private void OpenSettings()
         {
@@ -1229,15 +1568,20 @@ namespace MicroLend.UI
                     var repayments = ctx2.Repayments.Where(r => loans.Select(l => l.Id).Contains(r.LoanId)).ToList();
                     var totalRepaid = repayments.Sum(r => r.Amount);
                     var outstanding = totalBorrowed - totalRepaid;
-                    
+                    var lendedMoney = loans.Sum(l => l.CurrentAmount);
+
                     if (lblTotalBorrowed != null) lblTotalBorrowed.Text = $"₱{totalBorrowed:N2}";
                     if (lblTotalRepaid != null) lblTotalRepaid.Text = $"₱{totalRepaid:N2}";
                     if (lblOutstanding != null) lblOutstanding.Text = $"₱{outstanding:N2}";
+                    if (lblLendedMoney != null) lblLendedMoney.Text = $"₱{lendedMoney:N2}";
                 }
                 
                 // Refresh credit score
                 LoadCreditScoreAsync();
-                
+
+                // Refresh payment loan dropdown
+                PopulatePaymentLoanDropdown();
+
                 MessageBox.Show("Data refreshed successfully!", "Refresh", MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
             catch (Exception ex)
