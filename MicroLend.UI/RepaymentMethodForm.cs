@@ -109,8 +109,8 @@ namespace MicroLend.UI
 
             // Place buttons inside a bottom panel so they remain visible on small windows
             var btnPanel = new Panel { Dock = DockStyle.Bottom, Height = 60, BackColor = Color.Transparent };
-            btnOk.Location = new Point(btnPanel.ClientSize.Width - btnOk.Width - 140, 12);
-            btnCancel.Location = new Point(btnPanel.ClientSize.Width - btnCancel.Width - 12, 12);
+            btnOk.Location = new Point(220, 12);
+            btnCancel.Location = new Point(340, 12);
             btnOk.Anchor = AnchorStyles.Top | AnchorStyles.Right;
             btnCancel.Anchor = AnchorStyles.Top | AnchorStyles.Right;
             btnPanel.Controls.Add(btnOk);

@@ -41,4 +41,4 @@ namespace MicroLend.DAL.Repositories
         /// <param name="id">The unique identifier of the entity to delete.</param>
         Task DeleteAsync(int id);
     }
-e}
+}

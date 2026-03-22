@@ -191,6 +191,7 @@ namespace MicroLend.UI
             var pQuiz = AddPrimaryButton("Take Credit Quiz", Color.FromArgb(75, 181, 67), (s, e) => { foreach (TabPage tp in tabControl.TabPages) if (tp.Text == "My Loans") { tabControl.SelectedTab = tp; break; } BtnTakeQuiz_Click(s, e); });
             var pPay = AddPrimaryButton("Make Payment", Color.FromArgb(0, 102, 204), (s, e) => { foreach (TabPage tp in tabControl.TabPages) if (tp.Text == "Repayments") { tabControl.SelectedTab = tp; break; } BtnMakePayment_Click(s, e); });
             var pSupport = AddPrimaryButton("Contact Support", Color.FromArgb(128, 128, 128), (s, e) => OpenSupport());
+            var pRefresh = AddPrimaryButton("Refresh Data", Color.FromArgb(40, 167, 69), (s, e) => RefreshBorrowerData());
             Controls.Add(primaryPanel);
 
             // Instruction panel removed to match admin layout (no empty gray box).
@@ -394,34 +395,213 @@ namespace MicroLend.UI
             
             // Credit Score Tab
             var tabCreditScore = new TabPage("Credit Score");
-            var creditPanel = new FlowLayoutPanel
-            {
-                Dock = DockStyle.Fill,
-                FlowDirection = FlowDirection.TopDown,
-                AutoScroll = true,
-                Padding = new Padding(20)
-            };
+            var creditPanel = new Panel { Dock = DockStyle.Fill, Padding = new Padding(20) };
             
+            // Credit Score Header
             var creditInfoLabel = new Label
             {
-                Text = "Your Credit Score",
-                Font = new Font("Segoe UI", 16, FontStyle.Bold),
+                Text = "📊 Your Credit Score",
+                Font = new Font("Segoe UI", 18, FontStyle.Bold),
                 ForeColor = Color.FromArgb(0, 102, 204),
+                Location = new Point(20, 20),
+                AutoSize = true
+            };
+            creditPanel.Controls.Add(creditInfoLabel);
+            
+            // Credit Score Display Panel
+            var scoreDisplayPanel = new Panel
+            {
+                Location = new Point(20, 70),
+                Size = new Size(350, 180),
+                BackColor = Color.White,
+                BorderStyle = BorderStyle.FixedSingle
+            };
+            scoreDisplayPanel.Paint += (s, e) => {
+                using var p = new Pen(Color.FromArgb(200, 200, 200));
+                e.Graphics.DrawRectangle(p, 0, 0, scoreDisplayPanel.Width - 1, scoreDisplayPanel.Height - 1);
+            };
+            
+            var scoreTitleLabel = new Label
+            {
+                Text = "Current Score",
+                Location = new Point(20, 15),
+                Font = new Font("Segoe UI", 11),
+                ForeColor = Color.Gray,
                 AutoSize = true
             };
             
+            var scoreValueLabel = new Label
+            {
+                Name = "ScoreValue",
+                Text = "--",
+                Location = new Point(20, 40),
+                Font = new Font("Segoe UI", 42, FontStyle.Bold),
+                ForeColor = Color.FromArgb(0, 120, 215),
+                AutoSize = true
+            };
+            
+            var scoreMaxLabel = new Label
+            {
+                Text = "/ 100",
+                Location = new Point(150, 55),
+                Font = new Font("Segoe UI", 16),
+                ForeColor = Color.Gray,
+                AutoSize = true
+            };
+            
+            // Progress bar for visual score
+            var scoreProgressBar = new ProgressBar
+            {
+                Name = "ScoreProgress",
+                Location = new Point(20, 95),
+                Size = new Size(310, 20),
+                Style = ProgressBarStyle.Continuous,
+                Minimum = 0,
+                Maximum = 100,
+                Value = 0
+            };
+            
+            var scoreDescLabel = new Label
+            {
+                Name = "ScoreDesc",
+                Text = "Take the credit quiz to calculate your score",
+                Location = new Point(20, 125),
+                Font = new Font("Segoe UI", 10),
+                ForeColor = Color.Gray,
+                AutoSize = true
+            };
+            
+            var btnTakeQuizCredit = new Button
+            {
+                Text = "Take Credit Quiz",
+                Location = new Point(20, 150),
+                Size = new Size(150, 25),
+                FlatStyle = FlatStyle.Flat,
+                BackColor = Color.FromArgb(0, 150, 80),
+                ForeColor = Color.White,
+                Cursor = Cursors.Hand
+            };
+            btnTakeQuizCredit.FlatAppearance.BorderSize = 0;
+            btnTakeQuizCredit.Click += BtnTakeQuiz_Click;
+            
+            scoreDisplayPanel.Controls.Add(scoreTitleLabel);
+            scoreDisplayPanel.Controls.Add(scoreValueLabel);
+            scoreDisplayPanel.Controls.Add(scoreMaxLabel);
+            scoreDisplayPanel.Controls.Add(scoreProgressBar);
+            scoreDisplayPanel.Controls.Add(scoreDescLabel);
+            scoreDisplayPanel.Controls.Add(btnTakeQuizCredit);
+            creditPanel.Controls.Add(scoreDisplayPanel);
+            
+            // Score Categories Panel
+            var categoriesPanel = new Panel
+            {
+                Location = new Point(390, 70),
+                Size = new Size(350, 180),
+                BackColor = Color.White,
+                BorderStyle = BorderStyle.FixedSingle
+            };
+            categoriesPanel.Paint += (s, e) => {
+                using var p = new Pen(Color.FromArgb(200, 200, 200));
+                e.Graphics.DrawRectangle(p, 0, 0, categoriesPanel.Width - 1, categoriesPanel.Height - 1);
+            };
+            
+            var catTitleLabel = new Label
+            {
+                Text = "Score Breakdown",
+                Location = new Point(15, 15),
+                Font = new Font("Segoe UI", 12, FontStyle.Bold),
+                AutoSize = true
+            };
+            
+            var catQuizLabel = new Label
+            {
+                Text = "• Quiz Score (30%)",
+                Location = new Point(15, 45),
+                Font = new Font("Segoe UI", 10),
+                AutoSize = true
+            };
+            
+            var catPaymentLabel = new Label
+            {
+                Text = "• On-time Payments (50%)",
+                Location = new Point(15, 70),
+                Font = new Font("Segoe UI", 10),
+                AutoSize = true
+            };
+            
+            var catDebtLabel = new Label
+            {
+                Text = "• Debt-to-Income (20%)",
+                Location = new Point(15, 95),
+                Font = new Font("Segoe UI", 10),
+                AutoSize = true
+            };
+            
+            var catTipLabel = new Label
+            {
+                Text = "Tips: Complete your credit quiz and make timely repayments to improve your score!",
+                Location = new Point(15, 125),
+                Font = new Font("Segoe UI", 9),
+                ForeColor = Color.Gray,
+                AutoSize = true
+            };
+            
+            categoriesPanel.Controls.Add(catTitleLabel);
+            categoriesPanel.Controls.Add(catQuizLabel);
+            categoriesPanel.Controls.Add(catPaymentLabel);
+            categoriesPanel.Controls.Add(catDebtLabel);
+            categoriesPanel.Controls.Add(catTipLabel);
+            creditPanel.Controls.Add(categoriesPanel);
+            
+            // Score History Panel
+            var historyPanel = new Panel
+            {
+                Location = new Point(20, 270),
+                Size = new Size(720, 150),
+                BackColor = Color.White,
+                BorderStyle = BorderStyle.FixedSingle
+            };
+            historyPanel.Paint += (s, e) => {
+                using var p = new Pen(Color.FromArgb(200, 200, 200));
+                e.Graphics.DrawRectangle(p, 0, 0, historyPanel.Width - 1, historyPanel.Height - 1);
+            };
+            
+            var historyTitleLabel = new Label
+            {
+                Text = "Recent Quiz Results",
+                Location = new Point(15, 15),
+                Font = new Font("Segoe UI", 12, FontStyle.Bold),
+                AutoSize = true
+            };
+            
+            var dgvScoreHistory = new DataGridView
+            {
+                Location = new Point(15, 45),
+                Size = new Size(690, 90),
+                ReadOnly = true,
+                AllowUserToAddRows = false,
+                BackgroundColor = Color.White,
+                BorderStyle = BorderStyle.None
+            };
+            dgvScoreHistory.Columns.Add(new DataGridViewTextBoxColumn { Name = "Date", HeaderText = "Date", Width = 150 });
+            dgvScoreHistory.Columns.Add(new DataGridViewTextBoxColumn { Name = "Score", HeaderText = "Score", Width = 100 });
+            dgvScoreHistory.Columns.Add(new DataGridViewTextBoxColumn { Name = "Description", HeaderText = "Description", Width = 440 });
+            
+            historyPanel.Controls.Add(historyTitleLabel);
+            historyPanel.Controls.Add(dgvScoreHistory);
+            creditPanel.Controls.Add(historyPanel);
+            
+            // Description
             var creditDescLabel = new Label
             {
                 Text = "Your credit score is calculated based on your financial behavior, repayment history, and credit quiz results.\n" +
                        "A higher score means better creditworthiness and may qualify you for larger loans with better terms.\n\n" +
                        "Take the credit quiz regularly to improve your score!",
-                AutoSize = false,
-                Size = new Size(800, 100),
-                Font = new Font("Segoe UI", 11)
+                Location = new Point(20, 435),
+                Size = new Size(700, 80),
+                Font = new Font("Segoe UI", 10),
+                ForeColor = Color.Gray
             };
-            
-            creditPanel.Controls.Add(creditInfoLabel);
-            creditPanel.Controls.Add(new Label { Height = 20 });
             creditPanel.Controls.Add(creditDescLabel);
             
             tabCreditScore.Controls.Add(creditPanel);
@@ -518,6 +698,7 @@ namespace MicroLend.UI
             await LoadMyLoansAsync();
             await LoadRepaymentsAsync();
             LoadDocuments();
+            await LoadCreditScoreAsync();
 
 #if DEBUG
             // For developer testing: if borrower has no documents and no loans, create sample entries so UI is visible
@@ -797,6 +978,89 @@ namespace MicroLend.UI
             }
             catch { }
         }
+        
+        private async Task LoadCreditScoreAsync()
+        {
+            try
+            {
+                using var ctx = new MicroLendDbContext();
+                
+                // Try to get credit score from CreditScores table
+                var creditScores = await Task.Run(() => ctx.CreditScores
+                    .Where(c => c.UserId == _userId)
+                    .OrderByDescending(c => c.QuizDate)
+                    .ToList());
+                
+                int score = 0;
+                
+                if (creditScores.Any())
+                {
+                    var latestScore = creditScores.First();
+                    score = latestScore.Score;
+                }
+                else
+                {
+                    // Fallback to user's InitialCreditScore
+                    var user = ctx.Users.Find(_userId);
+                    if (user != null)
+                    {
+                        score = user.InitialCreditScore;
+                    }
+                }
+                
+                // Find score controls by looking through the form
+                foreach (Control ctrl in this.Controls)
+                {
+                    // Check Credit Score tab
+                    if (ctrl is TabControl tc)
+                    {
+                        foreach (TabPage tp in tc.TabPages)
+                        {
+                            if (tp.Text.Contains("Credit"))
+                            {
+                                foreach (Control pageCtrl in tp.Controls)
+                                {
+                                    if (pageCtrl is Panel mainPanel)
+                                    {
+                                        foreach (Control panel in mainPanel.Controls)
+                                        {
+                                            // Score display panel
+                                            foreach (Control c in panel.Controls)
+                                            {
+                                                if (c.Name == "ScoreValue" && c is Label lblScore)
+                                                {
+                                                    lblScore.Text = score.ToString();
+                                                    if (score >= 80) lblScore.ForeColor = Color.FromArgb(0, 150, 80);
+                                                    else if (score >= 60) lblScore.ForeColor = Color.FromArgb(200, 150, 0);
+                                                    else lblScore.ForeColor = Color.FromArgb(200, 50, 50);
+                                                }
+                                                if (c.Name == "ScoreProgress" && c is ProgressBar pb)
+                                                {
+                                                    pb.Value = Math.Min(100, Math.Max(0, score));
+                                                }
+                                                if (c.Name == "ScoreDesc" && c is Label lblDesc)
+                                                {
+                                                    if (score > 0)
+                                                    {
+                                                        if (score >= 80) lblDesc.Text = "Excellent! Your credit profile is strong.";
+                                                        else if (score >= 60) lblDesc.Text = "Good. Keep improving your financial habits.";
+                                                        else lblDesc.Text = "Fair. Consider taking the quiz to improve.";
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            catch
+            {
+                // Silently fail - score display will show default values
+            }
+        }
 
         private void OpenLoanDocuments()
         {
@@ -925,6 +1189,60 @@ namespace MicroLend.UI
             if (result == DialogResult.Yes)
             {
                 this.Close();
+            }
+        }
+
+        private void RefreshBorrowerData()
+        {
+            try
+            {
+                // Refresh loans - find the DataGridView directly
+                if (dgvMyLoans != null)
+                {
+                    using var ctx = new MicroLendDbContext();
+                    var borrower = ctx.Borrowers.FirstOrDefault(b => b.UserId == _userId);
+                    if (borrower != null)
+                    {
+                        var loans = ctx.Loans
+                            .Where(l => l.BorrowerId == borrower.Id)
+                            .Select(l => new {
+                                l.Id,
+                                l.Purpose,
+                                l.TargetAmount,
+                                l.CurrentAmount,
+                                l.Status,
+                                l.RiskScore,
+                                l.CreatedAt
+                            })
+                            .ToList();
+                        dgvMyLoans.DataSource = loans;
+                    }
+                }
+                
+                // Refresh summary
+                using var ctx2 = new MicroLendDbContext();
+                var borrower2 = ctx2.Borrowers.FirstOrDefault(b => b.UserId == _userId);
+                if (borrower2 != null)
+                {
+                    var loans = ctx2.Loans.Where(l => l.BorrowerId == borrower2.Id).ToList();
+                    var totalBorrowed = loans.Sum(l => l.TargetAmount);
+                    var repayments = ctx2.Repayments.Where(r => loans.Select(l => l.Id).Contains(r.LoanId)).ToList();
+                    var totalRepaid = repayments.Sum(r => r.Amount);
+                    var outstanding = totalBorrowed - totalRepaid;
+                    
+                    if (lblTotalBorrowed != null) lblTotalBorrowed.Text = $"₱{totalBorrowed:N2}";
+                    if (lblTotalRepaid != null) lblTotalRepaid.Text = $"₱{totalRepaid:N2}";
+                    if (lblOutstanding != null) lblOutstanding.Text = $"₱{outstanding:N2}";
+                }
+                
+                // Refresh credit score
+                LoadCreditScoreAsync();
+                
+                MessageBox.Show("Data refreshed successfully!", "Refresh", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error refreshing data: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 

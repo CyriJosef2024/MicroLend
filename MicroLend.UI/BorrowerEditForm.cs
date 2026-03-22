@@ -9,13 +9,14 @@ namespace MicroLend.UI
     {
         public Borrower Borrower { get; private set; }
 
-        private TextBox txtName, txtContact, txtIncome, txtBusiness;
+        private TextBox txtName, txtContact, txtIncome;
+        private ComboBox cmbBusiness;
 
         public BorrowerEditForm(Borrower? existing = null)
         {
             Text = existing == null ? "New Borrower" : "Edit Borrower";
             Width = 420;
-            Height = 300;
+            Height = 320;
             StartPosition = FormStartPosition.CenterParent;
 
             Borrower = existing ?? new Borrower();
@@ -27,10 +28,36 @@ namespace MicroLend.UI
             var lblIncome = new Label { Text = "Monthly income", Location = new Point(16, 128), AutoSize = true };
             txtIncome = new TextBox { Location = new Point(16, 148), Width = 160, Text = Borrower.MonthlyIncome.ToString() };
             var lblBusiness = new Label { Text = "Business type", Location = new Point(200, 128), AutoSize = true };
-            txtBusiness = new TextBox { Location = new Point(200, 148), Width = 176, Text = Borrower.BusinessType };
+            cmbBusiness = new ComboBox 
+            { 
+                Location = new Point(200, 148), 
+                Width = 176, 
+                DropDownStyle = ComboBoxStyle.DropDownList 
+            };
+            cmbBusiness.Items.AddRange(new[] { 
+                "Personal", 
+                "Sari-Sari Store", 
+                "Farming", 
+                "Food Stall / Carinderia", 
+                "Transportation", 
+                "Services (salon, repair, etc)", 
+                "Manufacturing", 
+                "Online Business", 
+                "Other" 
+            });
+            
+            // Set the existing business type if available
+            if (!string.IsNullOrEmpty(Borrower.BusinessType) && cmbBusiness.Items.Contains(Borrower.BusinessType))
+            {
+                cmbBusiness.SelectedItem = Borrower.BusinessType;
+            }
+            else
+            {
+                cmbBusiness.SelectedIndex = 0;
+            }
 
-            var btnOk = new Button { Text = "OK", Location = new Point(216, 200), Size = new Size(80, 30) };
-            var btnCancel = new Button { Text = "Cancel", Location = new Point(304, 200), Size = new Size(80, 30) };
+            var btnOk = new Button { Text = "OK", Location = new Point(216, 220), Size = new Size(80, 30) };
+            var btnCancel = new Button { Text = "Cancel", Location = new Point(304, 220), Size = new Size(80, 30) };
             btnOk.Click += (s, e) => { if (Apply()) DialogResult = DialogResult.OK; };
             btnCancel.Click += (s, e) => DialogResult = DialogResult.Cancel;
 
@@ -41,7 +68,7 @@ namespace MicroLend.UI
             Controls.Add(lblIncome);
             Controls.Add(txtIncome);
             Controls.Add(lblBusiness);
-            Controls.Add(txtBusiness);
+            Controls.Add(cmbBusiness);
             Controls.Add(btnOk);
             Controls.Add(btnCancel);
         }
@@ -52,7 +79,7 @@ namespace MicroLend.UI
             Borrower.Name = txtName.Text.Trim();
             Borrower.ContactNumber = txtContact.Text.Trim();
             if (decimal.TryParse(txtIncome.Text, out var inc)) Borrower.MonthlyIncome = inc;
-            Borrower.BusinessType = txtBusiness.Text.Trim();
+            Borrower.BusinessType = cmbBusiness.SelectedItem?.ToString() ?? "Personal";
             return true;
         }
     }

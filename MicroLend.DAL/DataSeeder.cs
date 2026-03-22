@@ -127,19 +127,8 @@ namespace MicroLend.DAL
                     if (cols.Length < 6) continue;
                     if (int.TryParse(cols[5], out var borrowerId) && borrowerId > 0 && !existingBorrowers.Contains(borrowerId))
                     {
-                        var fullname = "Auto Borrower " + borrowerId;
-                        var contact = "auto" + borrowerId + "@example.com";
-                        var income = "0";
-                        var userId = borrowerId;
-                        // ensure user exists
-                        if (!existingUsers.Contains(userId))
-                        {
-                            var uname = "user" + userId;
-                            await File.AppendAllLinesAsync(usersFile, new[] { $"{userId},{uname},password,Borrower" });
-                            existingUsers.Add(userId);
-                        }
-                        toAppendBorrowers.Add($"{borrowerId},{fullname},{contact},{income},{userId}");
-                        existingBorrowers.Add(borrowerId);
+                        // Skip auto-creating borrowers - require explicit borrower records
+                        continue;
                     }
                 }
                 if (toAppendBorrowers.Any()) await File.AppendAllLinesAsync(borrowersFile, toAppendBorrowers);
@@ -168,24 +157,8 @@ namespace MicroLend.DAL
                     var lid = loanId.Value;
                     if (existingLoans.Contains(lid)) continue;
 
-                    // create placeholder borrower if needed
-                    if (!existingBorrowers.Contains(lid))
-                    {
-                        var fullname = "Auto Borrower " + lid;
-                        var contact = "auto" + lid + "@example.com";
-                        var income = "0";
-                        var userId = lid;
-                        if (!existingUsers.Contains(userId))
-                        {
-                            await File.AppendAllLinesAsync(usersFile, new[] { $"{userId},user{userId},password,Borrower" });
-                            existingUsers.Add(userId);
-                        }
-                        await File.AppendAllLinesAsync(borrowersFile, new[] { $"{lid},{fullname},{contact},{income},{userId}" });
-                        existingBorrowers.Add(lid);
-                    }
-
-                    toAppendLoans.Add($"{lid},Placeholder loan for repayment,0,0,True,{lid}");
-                    existingLoans.Add(lid);
+                    // Skip auto-creating loans and borrowers - require explicit records
+                    continue;
                 }
                 if (toAppendLoans.Any()) await File.AppendAllLinesAsync(loansFile, toAppendLoans);
             }

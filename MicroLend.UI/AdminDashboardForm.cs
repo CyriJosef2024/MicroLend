@@ -1,6 +1,7 @@
 using System;
 using System.Drawing;
 using System.Linq;
+using System.Text.RegularExpressions;
 using System.Windows.Forms;
 using MicroLend.DAL;
 
@@ -158,6 +159,10 @@ namespace MicroLend.UI
             btnRefresh.Click += (s, e) => LoadUsers();
             toolPanel.Controls.Add(btnRefresh);
             
+            var btnCleanup = CreateStyledButton("Batch Delete", Color.FromArgb(220, 53, 69), new Point(550, 4));
+            btnCleanup.Click += (s, e) => BatchDeleteAccounts();
+            toolPanel.Controls.Add(btnCleanup);
+            
             panel.Controls.Add(toolPanel);
             
             dgv = new DataGridView
@@ -303,7 +308,7 @@ namespace MicroLend.UI
             filterPanel.Controls.Add(lblStatus);
             
             var cmbStatus = new ComboBox { Location = new Point(70, 8), Width = 150, DropDownStyle = ComboBoxStyle.DropDownList };
-            cmbStatus.Items.AddRange(new[] { "All", "Pending", "Active", "Approved", "Rejected", "FullyRepaid" });
+            cmbStatus.Items.AddRange(new[] { "All", "Pending", "Approved", "Verified", "Funding", "Active", "Rejected", "FullyRepaid" });
             cmbStatus.SelectedIndex = 0;
             filterPanel.Controls.Add(cmbStatus);
             
@@ -343,22 +348,283 @@ namespace MicroLend.UI
             };
             filterPanel.Controls.Add(btnClear);
             
+            var btnRefreshLoans = CreateStyledButton("Refresh", Color.FromArgb(40, 167, 69), new Point(680, 6));
+            btnRefreshLoans.Click += (s, e) => LoadLoans(panel);
+            filterPanel.Controls.Add(btnRefreshLoans);
+            
             panel.Controls.Add(filterPanel);
             
+            // Create DataGridView with button columns for approval actions
             var dgvLoans = new DataGridView
             {
                 Location = new Point(10, 60),
-                Size = new Size(1100, 570),
+                Size = new Size(1100, 500),
                 ReadOnly = true,
                 AllowUserToAddRows = false,
                 BackgroundColor = Color.White,
-                BorderStyle = BorderStyle.FixedSingle
+                BorderStyle = BorderStyle.FixedSingle,
+                AllowUserToDeleteRows = false,
+                SelectionMode = DataGridViewSelectionMode.FullRowSelect
             };
+            
+            // Add action buttons column
+            var colApprove = new DataGridViewButtonColumn
+            {
+                Name = "Approve",
+                HeaderText = "Approve",
+                Text = "Approve",
+                UseColumnTextForButtonValue = true,
+                Width = 70
+            };
+            dgvLoans.Columns.Add(colApprove);
+            
+            var colDecline = new DataGridViewButtonColumn
+            {
+                Name = "Decline",
+                HeaderText = "Decline",
+                Text = "Decline",
+                UseColumnTextForButtonValue = true,
+                Width = 70
+            };
+            dgvLoans.Columns.Add(colDecline);
+            
+            var colVerify = new DataGridViewButtonColumn
+            {
+                Name = "Verify",
+                HeaderText = "Verify",
+                Text = "Verify",
+                UseColumnTextForButtonValue = true,
+                Width = 70
+            };
+            dgvLoans.Columns.Add(colVerify);
+            
+            var colPending = new DataGridViewButtonColumn
+            {
+                Name = "Pending",
+                HeaderText = "Pending",
+                Text = "Set Pending",
+                UseColumnTextForButtonValue = true,
+                Width = 85
+            };
+            dgvLoans.Columns.Add(colPending);
+            
+            dgvLoans.CellClick += (s, e) => {
+                if (e.RowIndex < 0) return;
+                var row = dgvLoans.Rows[e.RowIndex];
+                var loanId = Convert.ToInt32(row.Cells["Id"].Value);
+                
+                if (dgvLoans.Columns[e.ColumnIndex].Name == "Approve")
+                {
+                    ApproveLoan(loanId, panel);
+                }
+                else if (dgvLoans.Columns[e.ColumnIndex].Name == "Decline")
+                {
+                    DeclineLoan(loanId, panel);
+                }
+                else if (dgvLoans.Columns[e.ColumnIndex].Name == "Pending")
+                {
+                    SetLoanPending(loanId, panel);
+                }
+                else if (dgvLoans.Columns[e.ColumnIndex].Name == "Verify")
+                {
+                    VerifyLoan(loanId, panel);
+                }
+            };
+            
             panel.Controls.Add(dgvLoans);
+            
+            // Legend panel
+            var legendPanel = new Panel
+            {
+                Location = new Point(10, 565),
+                Size = new Size(1100, 50),
+                BackColor = Color.FromArgb(245, 247, 250)
+            };
+            
+            var legendLabel = new Label
+            {
+                Text = "📋 Loan Ticketing System: Click 'Approve' to approve a loan application or 'Decline' to reject it. Approved loans move to Active status for funding.",
+                Location = new Point(10, 15),
+                AutoSize = true,
+                ForeColor = Color.FromArgb(100, 100, 100),
+                Font = new Font("Segoe UI", 9F)
+            };
+            legendPanel.Controls.Add(legendLabel);
+            panel.Controls.Add(legendPanel);
             
             Load += (s, e) => LoadLoans(panel);
             
             return panel;
+        }
+        
+        private void ApproveLoan(int loanId, Panel panel)
+        {
+            try
+            {
+                using var ctx = new MicroLendDbContext();
+                var loan = ctx.Loans.Find(loanId);
+                if (loan == null)
+                {
+                    MessageBox.Show("Loan not found.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    return;
+                }
+                
+                if (loan.Status == "Approved")
+                {
+                    MessageBox.Show("This loan is already approved.", "Info", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    return;
+                }
+                
+                if (loan.Status == "Rejected")
+                {
+                    MessageBox.Show("This loan was already declined. Reset to Pending first to approve.", "Info", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return;
+                }
+                
+                // Approve the loan - change status to Approved
+                loan.Status = "Approved";
+                ctx.SaveChanges();
+                
+                MessageBox.Show($"Loan #{loanId} has been approved!\n\nThe loan is now active and ready for funding.", 
+                    "Loan Approved", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                
+                // Refresh the grid
+                LoadLoans(panel);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error approving loan: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+        
+        private void DeclineLoan(int loanId, Panel panel)
+        {
+            try
+            {
+                using var ctx = new MicroLendDbContext();
+                var loan = ctx.Loans.Find(loanId);
+                if (loan == null)
+                {
+                    MessageBox.Show("Loan not found.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    return;
+                }
+                
+                if (loan.Status == "Rejected")
+                {
+                    MessageBox.Show("This loan is already declined.", "Info", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    return;
+                }
+                
+                // Show input dialog for decline reason
+                var reasonForm = new Form
+                {
+                    Width = 400,
+                    Height = 180,
+                    FormBorderStyle = FormBorderStyle.FixedDialog,
+                    Text = "Decline Loan Application",
+                    StartPosition = FormStartPosition.CenterParent,
+                    MaximizeBox = false
+                };
+                
+                var lblReason = new Label { Text = "Reason for declining (optional):", Location = new Point(20, 20), AutoSize = true };
+                var txtReason = new TextBox { Location = new Point(20, 45), Width = 340, Height = 60, Multiline = true };
+                
+                var btnConfirm = new Button { Text = "Decline Loan", Location = new Point(200, 110), Size = new Size(160, 35) };
+                var btnCancel = new Button { Text = "Cancel", Location = new Point(20, 110), Size = new Size(80, 35) };
+                
+                btnConfirm.BackColor = Color.FromArgb(200, 50, 50);
+                btnConfirm.ForeColor = Color.White;
+                btnConfirm.FlatStyle = FlatStyle.Flat;
+                
+                btnCancel.FlatStyle = FlatStyle.Flat;
+                
+                reasonForm.Controls.Add(lblReason);
+                reasonForm.Controls.Add(txtReason);
+                reasonForm.Controls.Add(btnConfirm);
+                reasonForm.Controls.Add(btnCancel);
+                
+                btnConfirm.Click += (s, e) => {
+                    // Decline the loan
+                    loan.Status = "Rejected";
+                    ctx.SaveChanges();
+                    
+                    MessageBox.Show($"Loan #{loanId} has been declined.\n\nReason: {(string.IsNullOrWhiteSpace(txtReason.Text) ? "Not provided" : txtReason.Text)}", 
+                        "Loan Declined", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    
+                    reasonForm.Close();
+                    LoadLoans(panel);
+                };
+                
+                btnCancel.Click += (s, e) => reasonForm.Close();
+                
+                reasonForm.ShowDialog();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error declining loan: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+        
+        private void SetLoanPending(int loanId, Panel panel)
+        {
+            try
+            {
+                using var ctx = new MicroLendDbContext();
+                var loan = ctx.Loans.Find(loanId);
+                if (loan == null)
+                {
+                    MessageBox.Show("Loan not found.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    return;
+                }
+                
+                // Set loan to pending status
+                loan.Status = "Pending";
+                ctx.SaveChanges();
+                
+                MessageBox.Show($"Loan #{loanId} has been set to Pending.\n\nThe loan application is now awaiting review.", 
+                    "Loan Pending", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                
+                // Refresh the grid
+                LoadLoans(panel);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error setting loan to pending: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+        
+        private void VerifyLoan(int loanId, Panel panel)
+        {
+            try
+            {
+                using var ctx = new MicroLendDbContext();
+                var loan = ctx.Loans.Find(loanId);
+                if (loan == null)
+                {
+                    MessageBox.Show("Loan not found.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    return;
+                }
+                
+                if (loan.Status != "Approved")
+                {
+                    MessageBox.Show("Only approved loans can be verified.", "Info", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return;
+                }
+                
+                // Verify the loan - mark as verified
+                loan.Status = "Verified";
+                ctx.SaveChanges();
+                
+                MessageBox.Show($"Loan #{loanId} has been verified!\n\nThe loan is now confirmed and active for funding.", 
+                    "Loan Verified", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                
+                // Refresh the grid
+                LoadLoans(panel);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error verifying loan: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
         }
         
         private Panel CreateCreditScoresPanel()
@@ -523,9 +789,12 @@ namespace MicroLend.UI
             try
             {
                 using var ctx = new MicroLendDbContext();
-                var borrowers = ctx.Borrowers.Select(b => new { 
-                    b.Id, b.Name, b.ContactNumber, b.MonthlyIncome, b.BusinessType, b.IsVerified 
-                }).ToList();
+                // Filter out auto-created borrowers (Auto Borrower X) that have no real names
+                var borrowers = ctx.Borrowers
+                    .Where(b => b.Name != null && !b.Name.StartsWith("Auto Borrower"))
+                    .Select(b => new { 
+                        b.Id, b.Name, b.ContactNumber, b.MonthlyIncome, b.BusinessType, b.IsVerified 
+                    }).ToList();
                 var dgv = panel.Controls.OfType<DataGridView>().FirstOrDefault();
                 if (dgv != null)
                 {
@@ -728,13 +997,16 @@ namespace MicroLend.UI
             {
                 using var ctx = new MicroLendDbContext();
                 
-                var users = ctx.Users.Select(u => new { 
-                    u.Id, 
-                    u.Username, 
-                    u.Role, 
-                    u.InitialCreditScore,
-                    u.CreatedAt
-                }).ToList();
+                // Filter out auto-created users (username like "user" + number pattern that were auto-generated)
+                var users = ctx.Users
+                    .Where(u => !Regex.IsMatch(u.Username ?? "", @"^user\d+$"))
+                    .Select(u => new { 
+                        u.Id, 
+                        u.Username, 
+                        u.Role, 
+                        u.InitialCreditScore,
+                        u.CreatedAt
+                    }).ToList();
                 
                 dgv.DataSource = users;
                 
@@ -769,6 +1041,160 @@ namespace MicroLend.UI
             if (result == DialogResult.Yes)
             {
                 this.Close();
+            }
+        }
+        
+        private void BatchDeleteAccounts()
+        {
+            // Create input dialog for batch deletion criteria
+            using var inputForm = new Form { Text = "Batch Delete Accounts", Width = 400, Height = 220, StartPosition = FormStartPosition.CenterParent };
+            inputForm.FormBorderStyle = FormBorderStyle.FixedDialog;
+            inputForm.MaximizeBox = false;
+            inputForm.MinimizeBox = false;
+            
+            var lblCreditScore = new Label { Text = "Credit Score Threshold (0-100):", Location = new Point(20, 20), Width = 200 };
+            var txtCreditScore = new TextBox { Location = new Point(20, 45), Width = 150, Text = "0" };
+            var lblCreditHint = new Label { Text = "Delete accounts with score <= this value", Location = new Point(180, 45), Width = 180, ForeColor = Color.Gray };
+            
+            var lblLoanAmount = new Label { Text = "Loan Amount Threshold (PHP):", Location = new Point(20, 80), Width = 200 };
+            var txtLoanAmount = new TextBox { Location = new Point(20, 105), Width = 150, Text = "0" };
+            var lblLoanHint = new Label { Text = "Delete accounts with total loans >= this amount", Location = new Point(180, 105), Width = 180, ForeColor = Color.Gray };
+            
+            var btnOK = new Button { Text = "Delete", Location = new Point(200, 150), Width = 80 };
+            var btnCancel = new Button { Text = "Cancel", Location = new Point(290, 150), Width = 80 };
+            
+            btnOK.Click += (s, e) => {
+                if (!int.TryParse(txtCreditScore.Text, out int creditScore) || creditScore < 0 || creditScore > 100)
+                {
+                    MessageBox.Show("Please enter a valid credit score (0-100).", "Validation Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return;
+                }
+                if (!decimal.TryParse(txtLoanAmount.Text, out decimal loanAmount) || loanAmount < 0)
+                {
+                    MessageBox.Show("Please enter a valid loan amount.", "Validation Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return;
+                }
+                inputForm.DialogResult = DialogResult.OK;
+                inputForm.Close();
+            };
+            btnCancel.Click += (s, e) => { inputForm.DialogResult = DialogResult.Cancel; inputForm.Close(); };
+            
+            inputForm.Controls.AddRange(new Control[] { lblCreditScore, txtCreditScore, lblCreditHint, lblLoanAmount, txtLoanAmount, lblLoanHint, btnOK, btnCancel });
+            
+            if (inputForm.ShowDialog() != DialogResult.OK) return;
+            
+            int creditThreshold = int.Parse(txtCreditScore.Text);
+            decimal loanThreshold = decimal.Parse(txtLoanAmount.Text);
+            
+            var confirm = MessageBox.Show(
+                $"This will delete all borrower accounts that meet ANY of these criteria:\n\n" +
+                $"- Credit score <= {creditThreshold}\n" +
+                $"- Total loan amount >= PHP {loanThreshold:N2}\n\n" +
+                "This will also delete all related loans, repayments, investments, documents, and credit scores. Continue?",
+                "Confirm Batch Delete", MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
+            
+            if (confirm != DialogResult.Yes) return;
+            
+            try
+            {
+                using var ctx = new MicroLendDbContext();
+                
+                // Get all borrowers with their credit scores and loan totals
+                var borrowersToDelete = new List<Tuple<MicroLend.DAL.Entities.Borrower, int, decimal>>();
+                
+                var allBorrowers = ctx.Borrowers.ToList();
+                foreach (var borrower in allBorrowers)
+                {
+                    // Get credit score
+                    int? creditScore = null;
+                    if (borrower.UserId.HasValue)
+                    {
+                        var cs = ctx.CreditScores.Where(c => c.UserId == borrower.UserId.Value)
+                            .OrderByDescending(c => c.QuizDate)
+                            .FirstOrDefault();
+                        creditScore = cs?.Score;
+                    }
+                    
+                    // Get total loan amount
+                    var totalLoans = ctx.Loans
+                        .Where(l => l.BorrowerId == borrower.Id)
+                        .Sum(l => l.TargetAmount);
+                    
+                    // Check if meets deletion criteria
+                    bool meetsCriteria = false;
+                    if (creditScore.HasValue && creditScore.Value <= creditThreshold)
+                        meetsCriteria = true;
+                    if (totalLoans >= loanThreshold)
+                        meetsCriteria = true;
+                    
+                    if (meetsCriteria)
+                    {
+                        borrowersToDelete.Add(Tuple.Create(borrower, creditScore ?? 0, totalLoans));
+                    }
+                }
+                
+                if (!borrowersToDelete.Any())
+                {
+                    MessageBox.Show("No accounts match the specified criteria.", "Info", 
+                        MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    return;
+                }
+                
+                int deletedCount = 0;
+                foreach (var item in borrowersToDelete)
+                {
+                    var borrower = item.Item1;
+                    var borrowerId = borrower.Id;
+                    
+                    // Delete related loans
+                    var borrowerLoans = ctx.Loans.Where(l => l.BorrowerId == borrowerId).ToList();
+                    foreach (var loan in borrowerLoans)
+                    {
+                        var loanId = loan.Id;
+                        var repayments = ctx.Repayments.Where(r => r.LoanId == loanId).ToList();
+                        ctx.Repayments.RemoveRange(repayments);
+                        var investments = ctx.Investments.Where(i => i.LoanId == loanId).ToList();
+                        ctx.Investments.RemoveRange(investments);
+                        var documents = ctx.Documents.Where(d => d.LoanId == loanId).ToList();
+                        ctx.Documents.RemoveRange(documents);
+                    }
+                    ctx.Loans.RemoveRange(borrowerLoans);
+                    
+                    // Delete credit scores
+                    if (borrower.UserId.HasValue)
+                    {
+                        var creditScores = ctx.CreditScores.Where(c => c.UserId == borrower.UserId.Value).ToList();
+                        ctx.CreditScores.RemoveRange(creditScores);
+                    }
+                    
+                    // Delete borrower
+                    ctx.Borrowers.Remove(borrower);
+                    
+                    // Delete associated user
+                    if (borrower.UserId.HasValue)
+                    {
+                        var user = ctx.Users.Find(borrower.UserId.Value);
+                        if (user != null)
+                        {
+                            ctx.Users.Remove(user);
+                        }
+                    }
+                    
+                    deletedCount++;
+                }
+                
+                ctx.SaveChanges();
+                
+                // Refresh data
+                LoadData();
+                
+                MessageBox.Show($"Successfully deleted {deletedCount} account(s) matching the criteria.", 
+                    "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error during batch delete: {ex.Message}", "Error", 
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
@@ -822,22 +1248,61 @@ namespace MicroLend.UI
         {
             if (dgv.CurrentRow == null) return;
             var id = Convert.ToInt32(dgv.CurrentRow.Cells["Id"].Value);
-            var confirm = MessageBox.Show($"Delete user ID {id}?","Confirm", MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
+            var confirm = MessageBox.Show($"Delete user ID {id}? This will also delete all related records (loans, investments, repayments).","Confirm Delete", MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
             if (confirm != DialogResult.Yes) return;
             try
             {
                 using var ctx = new MicroLendDbContext();
                 var user = ctx.Users.Find(id);
-                if (user != null)
+                if (user == null)
                 {
-                    ctx.Users.Remove(user);
-                    ctx.SaveChanges();
+                    MessageBox.Show("User not found.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    return;
                 }
-                LoadUsers();
+                
+                // Get related entities based on role
+                if (user.Role == "Borrower")
+                {
+                    // Delete related borrower records
+                    var borrower = ctx.Borrowers.FirstOrDefault(b => b.UserId == id);
+                    if (borrower != null)
+                    {
+                        var borrowerId = borrower.Id;
+                        // Delete related loans
+                        var loans = ctx.Loans.Where(l => l.BorrowerId == borrowerId).ToList();
+                        foreach (var loan in loans)
+                        {
+                            // Delete repayments
+                            var repayments = ctx.Repayments.Where(r => r.LoanId == loan.Id).ToList();
+                            ctx.Repayments.RemoveRange(repayments);
+                            // Delete investments
+                            var investments = ctx.Investments.Where(i => i.LoanId == loan.Id).ToList();
+                            ctx.Investments.RemoveRange(investments);
+                            // Delete documents
+                            var documents = ctx.Documents.Where(d => d.LoanId == loan.Id).ToList();
+                            ctx.Documents.RemoveRange(documents);
+                        }
+                        ctx.Loans.RemoveRange(loans);
+                        ctx.Borrowers.Remove(borrower);
+                    }
+                }
+                
+                // Also delete any credit scores
+                var creditScores = ctx.CreditScores.Where(c => c.UserId == id).ToList();
+                ctx.CreditScores.RemoveRange(creditScores);
+                
+                // Delete the user
+                ctx.Users.Remove(user);
+                ctx.SaveChanges();
+                
+                // Refresh the data to update counts
+                LoadData();
+                
+                MessageBox.Show("User deleted successfully.", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Error deleting user: " + ex.Message);
+                MessageBox.Show($"Error deleting user: {ex.Message}\n\nInner exception: {ex.InnerException?.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
